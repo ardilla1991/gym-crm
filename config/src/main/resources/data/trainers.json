@@ -1,0 +1,67 @@
+[
+  {
+    "id": 1,
+    "userId": 6,
+    "firstName": "Ethan",
+    "lastName": "Walker",
+    "username": "Ethan.Walker",
+    "password": "Zp8nW1rT5y",
+    "active": true,
+    "specialization": {
+      "id": 2,
+      "trainingTypeName": "YOGA"
+    }
+  },
+  {
+    "id": 2,
+    "userId": 7,
+    "firstName": "Chloe",
+    "lastName": "Bennett",
+    "username": "Chloe.Bennett",
+    "password": "Lm3nB7vC2x",
+    "active": true,
+    "specialization": {
+      "id": 1,
+      "trainingTypeName": "FITNESS"
+    }
+  },
+  {
+    "id": 3,
+    "userId": 8,
+    "firstName": "Brandon",
+    "lastName": "Cooper",
+    "username": "Brandon.Cooper",
+    "password": "k9#VxQ3mP8",
+    "active": true,
+    "specialization": {
+      "id": 3,
+      "trainingTypeName": "ZUMBA"
+    }
+  },
+  {
+    "id": 4,
+    "userId": 9,
+    "firstName": "Ashley",
+    "lastName": "Reed",
+    "username": "Ashley.Reed",
+    "password": "t7$LwN2rZ5",
+    "active": false,
+    "specialization": {
+      "id": 4,
+      "trainingTypeName": "STRETCHING"
+    }
+  },
+  {
+    "id": 5,
+    "userId": 10,
+    "firstName": "Tyler",
+    "lastName": "Morgan",
+    "username": "Tyler.Morgan",
+    "password": "y4!BmC9aX1",
+    "active": true,
+    "specialization": {
+      "id": 5,
+      "trainingTypeName": "RESISTANCE"
+    }
+  }
+]

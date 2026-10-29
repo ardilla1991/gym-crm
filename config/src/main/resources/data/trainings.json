@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "traineeId": 1,
+    "trainerId": 1,
+    "trainingName": "Morning Yoga Flow",
+    "trainingType": {
+      "id": 2,
+      "trainingTypeName": "YOGA"
+    },
+    "trainingDate": "2026-11-02",
+    "trainingDuration": 60
+  },
+  {
+    "id": 2,
+    "traineeId": 2,
+    "trainerId": 2,
+    "trainingName": "Full Body Cardio Fitness",
+    "trainingType": {
+      "id": 1,
+      "trainingTypeName": "FITNESS"
+    },
+    "trainingDate": "2026-11-03",
+    "trainingDuration": 45
+  },
+  {
+    "id": 3,
+    "traineeId": 4,
+    "trainerId": 3,
+    "trainingName": "High Energy Zumba Dance",
+    "trainingType": {
+      "id": 3,
+      "trainingTypeName": "ZUMBA"
+    },
+    "trainingDate": "2026-11-04",
+    "trainingDuration": 50
+  },
+  {
+    "id": 4,
+    "traineeId": 1,
+    "trainerId": 4,
+    "trainingName": "Deep Muscle Stretching",
+    "trainingType": {
+      "id": 4,
+      "trainingTypeName": "STRETCHING"
+    },
+    "trainingDate": "2026-11-05",
+    "trainingDuration": 40
+  },
+  {
+    "id": 5,
+    "traineeId": 2,
+    "trainerId": 5,
+    "trainingName": "Heavy Bands Resistance Training",
+    "trainingType": {
+      "id": 5,
+      "trainingTypeName": "RESISTANCE"
+    },
+    "trainingDate": "2026-11-06",
+    "trainingDuration": 60
+  },
+  {
+    "id": 6,
+    "traineeId": 4,
+    "trainerId": 1,
+    "trainingName": "Evening Relax Yoga",
+    "trainingType": {
+      "id": 2,
+      "trainingTypeName": "YOGA"
+    },
+    "trainingDate": "2026-11-07",
+    "trainingDuration": 45
+  }
+]

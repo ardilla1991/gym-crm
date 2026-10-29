@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "trainingTypeName": "FITNESS"
+  },
+  {
+    "id": 2,
+    "trainingTypeName": "YOGA"
+  },
+  {
+    "id": 3,
+    "trainingTypeName": "ZUMBA"
+  },
+  {
+    "id": 4,
+    "trainingTypeName": "STRETCHING"
+  },
+  {
+    "id": 5,
+    "trainingTypeName": "RESISTANCE"
+  }
+]

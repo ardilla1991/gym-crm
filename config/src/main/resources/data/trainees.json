@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "firstName": "Emily",
+    "lastName": "Johnson",
+    "username": "Emily.Johnson",
+    "password": "aB3kL9xQ2m",
+    "active": true,
+    "dateOfBirth": "1998-05-14",
+    "address": "Chicago, 742 Evergreen Terrace"
+  },
+  {
+    "id": 2,
+    "userId": 2,
+    "firstName": "Michael",
+    "lastName": "Miller",
+    "username": "Michael.Miller",
+    "password": "xR7$tU2vW9",
+    "active": true,
+    "dateOfBirth": "1992-11-23",
+    "address": "Austin, 1042 Maple Street"
+  },
+  {
+    "id": 3,
+    "userId": 3,
+    "firstName": "Sarah",
+    "lastName": "Davis",
+    "username": "Sarah.Davis",
+    "password": "pL8#yT4zK1",
+    "active": false,
+    "dateOfBirth": "2001-03-08",
+    "address": "Seattle, 350 Pine Street"
+  },
+  {
+    "id": 4,
+    "userId": 4,
+    "firstName": "James",
+    "lastName": "Wilson",
+    "username": "James.Wilson",
+    "password": "qV5&mB9eN3",
+    "active": true,
+    "dateOfBirth": "1987-07-19",
+    "address": "Denver, 1205 Oak Avenue"
+  },
+  {
+    "id": 5,
+    "userId": 5,
+    "firstName": "Jessica",
+    "lastName": "Taylor",
+    "username": "Jessica.Taylor",
+    "password": "wM2!kO7aC4",
+    "active": false,
+    "dateOfBirth": "1995-09-30",
+    "address": "Boston, 88 Beacon Street"
+  }
+]
