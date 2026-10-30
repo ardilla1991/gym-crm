@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "userId": 3,
+    "firstName": "Tom",
+    "lastName": "Coach",
+    "username": "Tom.Coach",
+    "password": "Coach12345",
+    "active": true,
+    "specialization": { "id": 2, "trainingTypeName": "YOGA" }
+  }
+]

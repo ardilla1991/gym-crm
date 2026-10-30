@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "traineeId": 1,
+    "trainerId": 1,
+    "trainingName": "Test yoga",
+    "trainingType": { "id": 2, "trainingTypeName": "YOGA" },
+    "trainingDate": "2026-01-15",
+    "trainingDuration": 60
+  }
+]

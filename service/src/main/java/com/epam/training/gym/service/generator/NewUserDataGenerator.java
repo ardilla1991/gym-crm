@@ -86,7 +86,8 @@ public class NewUserDataGenerator {
     }
 
     private List<User> allUsers() {
-        List<User> users = new ArrayList<>(traineeDao.findAll());
+        List<User> users = new ArrayList<>();
+        users.addAll(traineeDao.findAll());
         users.addAll(trainerDao.findAll());
 
         return users;

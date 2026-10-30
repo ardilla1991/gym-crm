@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "username": "John.Doe",
+    "password": "Test123456",
+    "active": true,
+    "dateOfBirth": "1990-05-20",
+    "address": "1 Test St, Testville, TX 75001"
+  },
+  {
+    "id": 2,
+    "userId": 2,
+    "firstName": "Jane",
+    "lastName": "Roe",
+    "username": "Jane.Roe",
+    "password": "Test654321",
+    "active": false,
+    "dateOfBirth": null,
+    "address": null
+  }
+]
