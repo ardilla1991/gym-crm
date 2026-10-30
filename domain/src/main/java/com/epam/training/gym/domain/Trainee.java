@@ -1,8 +1,9 @@
 package com.epam.training.gym.domain;
 
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -11,6 +12,6 @@ import java.util.Date;
 @ToString(callSuper = true)
 public class Trainee extends User {
     private Long id;
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
     private String address;
 }

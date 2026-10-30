@@ -30,18 +30,6 @@ public class TrainingDaoImpl implements TrainingDao {
     }
 
     @Override
-    public Training update(Training training) {
-        storage.put(training.getId(), training);
-
-        return training;
-    }
-
-    @Override
-    public void delete(Long id) {
-        storage.remove(id);
-    }
-
-    @Override
     public Optional<Training> findById(Long id) {
         return Optional.ofNullable(storage.get(id));
     }

@@ -40,11 +40,6 @@ public class TrainerDaoImpl implements TrainerDao {
     }
 
     @Override
-    public void delete(Long id) {
-        storage.remove(id);
-    }
-
-    @Override
     public Optional<Trainer> findById(Long id) {
         return Optional.ofNullable(storage.get(id));
     }

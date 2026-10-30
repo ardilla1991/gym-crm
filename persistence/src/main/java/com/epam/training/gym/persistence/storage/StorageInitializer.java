@@ -1,5 +1,7 @@
 package com.epam.training.gym.persistence.storage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import com.epam.training.gym.domain.*;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -20,6 +22,8 @@ import static com.epam.training.gym.persistence.storage.StorageNames.*;
 
 @Component
 public class StorageInitializer implements BeanPostProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(StorageInitializer.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private Resource trainingTypeFile;
@@ -73,6 +77,7 @@ public class StorageInitializer implements BeanPostProcessor {
                 Long id = idExtractor.apply(record);
                 storage.put(id, record);
             }
+            log.info("Loaded {} records from {}", records.size(), resource.getFilename());
         } catch (IOException e) {
             throw new BeanInitializationException("Failed to read initial data from " + resource, e);
         }

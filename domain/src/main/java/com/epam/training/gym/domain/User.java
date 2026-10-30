@@ -1,6 +1,7 @@
 package com.epam.training.gym.domain;
 
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter

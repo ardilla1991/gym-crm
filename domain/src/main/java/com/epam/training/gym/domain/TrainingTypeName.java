@@ -7,13 +7,13 @@ public enum TrainingTypeName {
     STRETCHING("stretching"),
     RESISTANCE("resistance");
 
-    private final String name;
+    private final String displayName;
 
-    TrainingTypeName(String name) {
-        this.name = name;
+    TrainingTypeName(String displayName) {
+        this.displayName = displayName;
     }
 
-    public String getName() {
-        return name;
+    public String getDisplayName() {
+        return displayName;
     }
 }

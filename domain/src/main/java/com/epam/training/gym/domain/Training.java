@@ -2,7 +2,7 @@ package com.epam.training.gym.domain;
 
 import lombok.*;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -16,7 +16,7 @@ public class Training {
     private Long trainerId;
     private String trainingName;
     private TrainingType trainingType;
-    private Date  trainingDate;
+    private LocalDate trainingDate;
     private int trainingDuration;
 
 }
