@@ -54,6 +54,14 @@
 
     <build>
         <plugins>
+            <!-- Run: mvn install, then mvn -pl api exec:java (or just run Main from the IDE) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.epam.training.gym.api.Main</mainClass>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
