@@ -2,6 +2,7 @@ package com.epam.training.gym.service.impl;
 
 import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.persistence.dao.TraineeDao;
+import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,12 +11,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class TraineeServiceImplTest {
@@ -37,34 +36,64 @@ public class TraineeServiceImplTest {
     @Test
     void create_fillsGeneratedDataAndSaves() {
         Trainee emily = Trainee.builder().firstName("Emily").lastName("Johnson").build();
-        when(newUserDataGenerator.nextUserId()).thenReturn(10L);
-        when(newUserDataGenerator.generateUsername("Emily", "Johnson")).thenReturn("Emily.Johnson1");
-        when(newUserDataGenerator.generatePassword()).thenReturn("Abc123xyz9");
         when(traineeDao.save(emily)).thenReturn(emily);
 
         Trainee created = traineeService.create(emily);
 
-        assertEquals(10L, created.getUserId());
-        assertEquals("Emily.Johnson1", created.getUsername());
-        assertEquals("Abc123xyz9", created.getPassword());
-        assertTrue(created.isActive());
+        assertSame(emily, created);
+        verify(newUserDataGenerator).fillNewUserData(emily);
         verify(traineeDao).save(emily);
     }
 
     @Test
-    void update_delegatesToDao() {
-        Trainee emily = Trainee.builder().id(1L).firstName("Emily").build();
-        when(traineeDao.update(emily)).thenReturn(emily);
+    void update_keepsGeneratedDataOfStoredTrainee() {
+        Trainee stored = Trainee.builder()
+                .id(1L).userId(5L).username("Emily.Johnson").password("Secret1234").firstName("Emily")
+                .build();
+        Trainee changes = Trainee.builder().id(1L).firstName("Emma").build();
+        when(traineeDao.findById(1L)).thenReturn(Optional.of(stored));
+        when(traineeDao.update(changes)).thenReturn(changes);
 
-        assertSame(emily, traineeService.update(emily));
-        verify(traineeDao).update(emily);
+        Trainee updated = traineeService.update(changes);
+
+        assertEquals("Emma", updated.getFirstName());
+        assertEquals(5L, updated.getUserId());
+        assertEquals("Emily.Johnson", updated.getUsername());
+        assertEquals("Secret1234", updated.getPassword());
     }
 
     @Test
-    void delete_delegatesToDao() {
+    void update_unknownId_throwsExceptionAndDoesNotSave() {
+        Trainee unknown = Trainee.builder().id(99L).build();
+        when(traineeDao.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> traineeService.update(unknown));
+        verify(traineeDao, never()).update(any());
+    }
+
+    @Test
+    void update_withoutId_throwsException() {
+        Trainee withoutId = Trainee.builder().firstName("Emily").build();
+
+        assertThrows(NullPointerException.class, () -> traineeService.update(withoutId));
+    }
+
+    @Test
+    void delete_existingTrainee_deletesIt() {
+        when(traineeDao.findById(1L)).thenReturn(Optional.of(Trainee.builder().id(1L).build()));
+
         traineeService.delete(1L);
 
         verify(traineeDao).delete(1L);
+    }
+
+    @Test
+    void delete_unknownTrainee_doesNothing() {
+        when(traineeDao.findById(99L)).thenReturn(Optional.empty());
+
+        traineeService.delete(99L);
+
+        verify(traineeDao, never()).delete(anyLong());
     }
 
     @Test
@@ -79,7 +108,7 @@ public class TraineeServiceImplTest {
     void findById_unknownId_throwsException() {
         when(traineeDao.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> traineeService.findById(99L));
+        assertThrows(EntityNotFoundException.class, () -> traineeService.findById(99L));
     }
 
     @Test

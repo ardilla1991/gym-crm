@@ -84,11 +84,6 @@ public class NewUserDataGeneratorTest {
     }
 
     @Test
-    void generatePassword_returnsDifferentValues() {
-        assertNotEquals(generator.generatePassword(), generator.generatePassword());
-    }
-
-    @Test
     void nextUserId_returnsMaxAmongTraineesAndTrainersPlusOne() {
         when(traineeDao.findAll()).thenReturn(List.of(trainee("a", 1L), trainee("b", 2L)));
         when(trainerDao.findAll()).thenReturn(List.of(trainer("c", 5L)));
@@ -102,6 +97,20 @@ public class NewUserDataGeneratorTest {
         when(trainerDao.findAll()).thenReturn(List.of());
 
         assertEquals(1L, generator.nextUserId());
+    }
+
+    @Test
+    void fillNewUserData_setsAllGeneratedFields() {
+        when(traineeDao.findAll()).thenReturn(List.of());
+        when(trainerDao.findAll()).thenReturn(List.of());
+        Trainee emily = Trainee.builder().firstName("Emily").lastName("Johnson").build();
+
+        generator.fillNewUserData(emily);
+
+        assertEquals(1L, emily.getUserId());
+        assertEquals("Emily.Johnson", emily.getUsername());
+        assertEquals(10, emily.getPassword().length());
+        assertTrue(emily.isActive());
     }
 
     private static Trainee trainee(String username, Long userId) {

@@ -9,6 +9,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.epam.training.gym.persistence.storage.StorageNames.*;
 
+/**
+ * In-memory storage: one namespace = one java.util.Map = one Spring bean.
+ * Key is the entity id, so listing one entity type is simply storage.values().
+ * The maps are filled from files at startup by StorageInitializer (persistence module).
+ */
 @Configuration
 public class StorageConfig {
     @Bean(TRAINEE_STORAGE)

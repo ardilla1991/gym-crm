@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Single entry point to the gym CRM: delegates every call to the matching service.
+ * Contains no business logic of its own.
+ */
 @Component
 public class GymFacade {
     private final TraineeService traineeService;

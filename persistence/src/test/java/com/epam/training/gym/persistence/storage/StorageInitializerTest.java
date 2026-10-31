@@ -13,6 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.epam.training.gym.persistence.storage.StorageNames.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Uses small test files from src/test/resources/test-data,
+ * not the real application data.
+ */
 public class StorageInitializerTest {
 
     private StorageInitializer initializer;

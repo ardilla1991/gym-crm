@@ -9,11 +9,23 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
 import java.time.LocalDate;
 
+/**
+ * Starts the Spring context and shows the gym CRM in action through the facade.
+ */
 public class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
+        try{
+            run();
+        } catch (Exception e) {
+            // the outermost catch logs the error; inner layers only throw
+            log.error("Application failed", e);
+        }
+    }
+
+    static void run() {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class)) {
             GymFacade facade = context.getBean(GymFacade.class);
 
@@ -67,8 +79,7 @@ public class Main {
             log.info("--- Delete the trainee ---");
             facade.deleteTrainee(trainee.getId());
             log.info("Trainees left: {}", facade.findAllTrainees().size());
-        } catch (Exception e) {
-            log.error("Application failed", e);
         }
     }
+
 }

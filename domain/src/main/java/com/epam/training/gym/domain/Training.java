@@ -4,6 +4,9 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+/**
+ * A training session: one trainee, one trainer, one training type.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,6 +20,7 @@ public class Training {
     private String trainingName;
     private TrainingType trainingType;
     private LocalDate trainingDate;
+    /** Duration in minutes. */
     private int trainingDuration;
 
 }

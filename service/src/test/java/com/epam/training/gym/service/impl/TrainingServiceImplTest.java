@@ -1,6 +1,7 @@
 package com.epam.training.gym.service.impl;
 
 import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +10,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -50,7 +50,7 @@ public class TrainingServiceImplTest {
     void findById_unknownId_throwsException() {
         when(trainingDao.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> trainingService.findById(99L));
+        assertThrows(EntityNotFoundException.class, () -> trainingService.findById(99L));
     }
 
     @Test

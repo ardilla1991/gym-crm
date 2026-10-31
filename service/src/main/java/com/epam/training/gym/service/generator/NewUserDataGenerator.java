@@ -12,6 +12,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Calculates the data of a new Trainee/Trainer profile: username, password and userId.
+ * Trainees and trainers share one "users" space, so it looks at both of them.
+ */
 @Component
 public class NewUserDataGenerator {
     private static final String PASSWORD_CHARS =
@@ -19,6 +23,7 @@ public class NewUserDataGenerator {
     private static final int PASSWORD_LENGTH = 10;
     private static final String USERNAME_SEPARATOR = ".";
 
+    /** SecureRandom instead of Random: passwords must not be predictable. */
     private final SecureRandom random = new SecureRandom();
 
     private TraineeDao traineeDao;
@@ -36,13 +41,9 @@ public class NewUserDataGenerator {
     }
 
     /**
-     * Calculate Username from Trainer/Trainee first name and last name
-     * by concatenation by using a separator (eg. John.Smith).
-     * In the case that already exists Trainer or Trainee with the same pair of first and
-     * last name as a suffix to the username should be added a serial number.
-     * @param firstName first name
-     * @param lastName last name
-     * @return generated Username
+     * FirstName.LastName, e.g. John.Smith.
+     * If a trainee or trainer with the same name already exists, a serial number is added:
+     * John.Smith1, John.Smith2, ...
      */
     public String generateUsername(String firstName, String lastName) {
         String baseUsername = firstName + USERNAME_SEPARATOR + lastName;
@@ -64,7 +65,7 @@ public class NewUserDataGenerator {
         return baseUsername + suffix;
     }
 
-    /** Random 10 chars length string */
+    /** Random string of 10 characters. */
     public String generatePassword() {
         StringBuilder password = new StringBuilder(PASSWORD_LENGTH);
         for (int i = 0; i < PASSWORD_LENGTH; i++) {
@@ -74,6 +75,7 @@ public class NewUserDataGenerator {
         return password.toString();
     }
 
+    /**  The biggest one Usser id + 1. */
     public Long nextUserId() {
         long max = 0;
         for (User user : allUsers()) {
@@ -83,6 +85,15 @@ public class NewUserDataGenerator {
         }
 
         return max + 1;
+    }
+
+    /** Fills the generated part of a new profile: userId, username and password.
+     * A new profile is active. */
+    public void fillNewUserData(User user) {
+        user.setUserId(nextUserId());
+        user.setUsername(generateUsername(user.getFirstName(), user.getLastName()));
+        user.setPassword(generatePassword());
+        user.setActive(true);
     }
 
     private List<User> allUsers() {

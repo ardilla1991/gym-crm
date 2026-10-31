@@ -3,6 +3,7 @@ package com.epam.training.gym.service.impl;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.service.TrainerService;
+import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @Service
 public class TrainerServiceImpl implements TrainerService {
@@ -32,12 +33,14 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     public Trainer create(Trainer trainer) {
-        trainer.setUserId(newUserDataGenerator.nextUserId());
-        trainer.setUsername(newUserDataGenerator.generateUsername(trainer.getFirstName(), trainer.getLastName()));
-        trainer.setPassword(newUserDataGenerator.generatePassword());
-        trainer.setActive(true);
-
-        Trainer saved = trainerDao.save(trainer);
+        Trainer saved;
+        // Generating the username and saving must be one step: otherwise two profiles created at the same time
+        // (a trainee and a trainer too) could get the same username. The generator is a single bean shared
+        // by both services, so it is used as their common lock.
+        synchronized (newUserDataGenerator) {
+            newUserDataGenerator.fillNewUserData(trainer);
+            saved = trainerDao.save(trainer);
+        }
         log.info("Trainer created: id={}, username={}", saved.getId(), saved.getUsername());
 
         return saved;
@@ -45,6 +48,12 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     public Trainer update(Trainer trainer) {
+        Objects.requireNonNull(trainer.getId(), "Trainer id is required for update");
+        Trainer existing = findById(trainer.getId());
+        trainer.setUserId(existing.getUserId());
+        trainer.setUsername(existing.getUsername());
+        trainer.setPassword(existing.getPassword());
+
         Trainer updated = trainerDao.update(trainer);
         log.info("Trainer updated: id={}, username={}", updated.getId(), updated.getUsername());
 
@@ -56,7 +65,7 @@ public class TrainerServiceImpl implements TrainerService {
         log.debug("Looking for trainer id={}", id);
 
         return trainerDao.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Trainer with id " + id + " not found"));
+                .orElseThrow(() ->  new EntityNotFoundException("Trainer", id));
     }
 
     @Override

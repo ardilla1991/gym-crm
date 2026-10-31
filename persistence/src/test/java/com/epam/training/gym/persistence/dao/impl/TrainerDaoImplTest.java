@@ -29,6 +29,15 @@ public class TrainerDaoImplTest {
     }
 
     @Test
+    void save_twice_assignsConsecutiveIds() {
+        Trainer first = trainerDao.save(trainer(null, "David"));
+        Trainer second = trainerDao.save(trainer(null, "Jessica"));
+
+        assertEquals(1L, first.getId());
+        assertEquals(2L, second.getId());
+    }
+
+    @Test
     void update_existingTrainer_replacesIt() {
         storage.put(1L, trainer(1L, "David"));
 

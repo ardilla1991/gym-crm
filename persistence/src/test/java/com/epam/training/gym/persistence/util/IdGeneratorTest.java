@@ -10,19 +10,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class IdGeneratorTest {
 
     @Test
-    void nextId_emptyStorage_returnsOne() {
+    void maxId_emptyStorage_returnsZero() {
         Map<Long, String> storage = new HashMap<>();
 
-        assertEquals(1L, IdGenerator.nextId(storage));
+        assertEquals(0L, IdGenerator.maxId(storage));
     }
 
     @Test
-    void nextId_returnsMaxIdPlusOne() {
+    void maxId_returnsBiggestId() {
         Map<Long, String> storage = new HashMap<>();
         storage.put(1L, "a");
         storage.put(5L, "b");
         storage.put(3L, "c");
 
-        assertEquals(6L, IdGenerator.nextId(storage));
+        assertEquals(5L, IdGenerator.maxId(storage));
     }
 }

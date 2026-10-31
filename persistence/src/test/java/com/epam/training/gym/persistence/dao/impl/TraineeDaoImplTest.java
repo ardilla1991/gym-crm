@@ -23,13 +23,23 @@ public class TraineeDaoImplTest {
     }
 
     @Test
-    void save_assignsNextIdAndStoresTrainee() {
+    void save_continuesAfterLoadedIds() {
         storage.put(3L, trainee(3L, "Emily"));
+        traineeDao.setStorage(storage);   // like at startup: the DAO receives an already filled storage
 
         Trainee saved = traineeDao.save(trainee(null, "Michael"));
 
         assertEquals(4L, saved.getId());
         assertSame(saved, storage.get(4L));
+    }
+
+    @Test
+    void save_twice_assignsConsecutiveIds() {
+        Trainee first = traineeDao.save(trainee(null, "Emily"));
+        Trainee second = traineeDao.save(trainee(null, "Michael"));
+
+        assertEquals(1L, first.getId());
+        assertEquals(2L, second.getId());
     }
 
     @Test

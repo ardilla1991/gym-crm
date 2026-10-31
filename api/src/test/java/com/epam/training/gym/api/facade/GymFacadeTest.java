@@ -18,6 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The facade only delegates, so every test checks that the call reaches the right service.
+ */
 @ExtendWith(MockitoExtension.class)
 public class GymFacadeTest {
     @Mock

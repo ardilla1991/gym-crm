@@ -21,13 +21,23 @@ public class TrainingDaoImplTest {
     }
 
     @Test
-    void save_assignsNextIdAndStoresTraining() {
+    void save_continuesAfterLoadedIds() {
         storage.put(1L, training(1L, "Morning yoga"));
+        trainingDao.setStorage(storage);   // like at startup: the DAO receives an already filled storage
 
         Training saved = trainingDao.save(training(null, "Evening zumba"));
 
         assertEquals(2L, saved.getId());
         assertSame(saved, storage.get(2L));
+    }
+
+    @Test
+    void save_twice_assignsConsecutiveIds() {
+        Training first = trainingDao.save(training(null, "Morning yoga"));
+        Training second = trainingDao.save(training(null, "Evening zumba"));
+
+        assertEquals(1L, first.getId());
+        assertEquals(2L, second.getId());
     }
 
     @Test
