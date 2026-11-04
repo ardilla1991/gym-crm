@@ -13,7 +13,6 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
  */
 @Configuration
 @ComponentScan("com.epam.training.gym")
-@PropertySource("classpath:application.properties")
 public class AppConfig {
 
     /**
