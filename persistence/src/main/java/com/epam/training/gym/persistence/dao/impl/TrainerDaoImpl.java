@@ -1,0 +1,54 @@
+package com.epam.training.gym.persistence.dao.impl;
+
+import com.epam.training.gym.domain.Trainer;
+import com.epam.training.gym.persistence.dao.TrainerDao;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public class TrainerDaoImpl implements TrainerDao {
+
+    private static final Logger log = LoggerFactory.getLogger(TrainerDaoImpl.class);
+
+    private EntityManager entityManager;
+
+    @PersistenceContext
+    public void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
+    }
+
+    @Override
+    public Trainer save(Trainer trainer) {
+        entityManager.persist(trainer);
+        log.debug("Trainer saved: id={}", trainer.getId());
+
+        return trainer;
+    }
+
+    @Override
+    public Optional<Trainer> findByUsername(String username) {
+        return entityManager
+                .createQuery("SELECT t FROM Trainer t WHERE t.user.username = :username", Trainer.class)
+                .setParameter("username", username)
+                .getResultStream()
+                .findFirst();
+    }
+
+    @Override
+    public List<Trainer> findByUsernames(Collection<String> usernames) {
+        if (usernames.isEmpty()) {
+            return List.of();   // no need to query the database
+        }
+        return entityManager
+                .createQuery("SELECT t FROM Trainer t WHERE t.user.username IN :usernames", Trainer.class)
+                .setParameter("usernames", usernames)
+                .getResultList();
+    }
+}
