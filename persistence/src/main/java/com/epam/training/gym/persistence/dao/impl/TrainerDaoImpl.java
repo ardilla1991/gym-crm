@@ -51,4 +51,18 @@ public class TrainerDaoImpl implements TrainerDao {
                 .setParameter("usernames", usernames)
                 .getResultList();
     }
+
+    @Override
+    public List<Trainer> findNotAssignedToTrainee(String traineeUsername) {
+        return entityManager.createQuery("""
+                    SELECT tr FROM Trainer tr
+                    WHERE tr NOT IN (
+                        SELECT assigned FROM Trainee te JOIN te.trainers assigned
+                        WHERE te.user.username = :username)
+                    """, Trainer.class)
+                .setParameter("username", traineeUsername)
+                .getResultList();
+    }
+
+
 }

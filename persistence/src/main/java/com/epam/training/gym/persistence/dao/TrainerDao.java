@@ -14,4 +14,7 @@ public interface TrainerDao {
 
     /** For updating a trainee's trainers list by trainer usernames. */
     List<Trainer> findByUsernames(Collection<String> usernames);
+
+    /** Trainers that are not in the trainee's trainers list. */
+    List<Trainer> findNotAssignedToTrainee(String traineeUsername);
 }

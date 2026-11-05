@@ -8,7 +8,7 @@ import com.epam.training.gym.domain.User;
 import java.time.LocalDate;
 
 /** Builders of not yet saved entities for DAO tests. */
-public class TestEntities {
+public final class TestEntities {
 
     private TestEntities() {
     }
@@ -18,7 +18,7 @@ public class TestEntities {
                 .firstName(firstName)
                 .lastName(lastName)
                 .username(username)
-                .password("abcdefghij")
+                .password("abcde12345")
                 .isActive(true)
                 .build();
     }
@@ -35,6 +35,22 @@ public class TestEntities {
         return Trainer.builder()
                 .specialization(specialization)
                 .user(newUser("Anna", "Lee", username))
+                .build();
+    }
+
+    public static Trainee newTrainee(String firstName, String lastName, String username) {
+        return Trainee.builder()
+                .user(newUser(firstName, lastName, username))
+                .dateOfBirth(LocalDate.of(1990, 1, 15))
+                .address("1 Main Street")
+                .build();
+    }
+
+    public static Trainer newTrainer(String firstName, String lastName, String username,
+                                     TrainingType specialization) {
+        return Trainer.builder()
+                .user(newUser(firstName, lastName, username))
+                .specialization(specialization)
                 .build();
     }
 }

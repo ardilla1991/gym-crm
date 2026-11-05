@@ -50,7 +50,7 @@ public class TraineeDaoImplTest {
 
     @Test
     void findByUsername_unknown_returnsEmpty() {
-        assertTrue(traineeDao.findByUsername("No.Body").isEmpty());
+        assertTrue(traineeDao.findByUsername("User.Name").isEmpty());
     }
 
     @Test
@@ -92,6 +92,7 @@ public class TraineeDaoImplTest {
                 .trainingDuration(60)
                 .build();
         entityManager.persist(training);
+
         return training;
     }
 
