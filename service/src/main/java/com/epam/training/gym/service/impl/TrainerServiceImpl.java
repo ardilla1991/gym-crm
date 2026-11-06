@@ -70,6 +70,11 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     }
 
     @Override
+    protected Optional<Trainer> findProfileByUsername(String username) {
+        return trainerDao.findByUsernameWithTrainees(username);
+    }
+
+    @Override
     @Transactional
     public Trainer create(Trainer trainer) {
         entityValidator.validate(trainer);

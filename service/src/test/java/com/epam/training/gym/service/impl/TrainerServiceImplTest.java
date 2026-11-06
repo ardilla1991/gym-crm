@@ -200,7 +200,7 @@ public class TrainerServiceImplTest {
     void getProfile_signedInUser_readsTrainerProfile() {
         Trainer trainer = existingTrainer(true);
         Credentials traineeCredentials = new Credentials("John.Smith", "abcdef1234");
-        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+        when(trainerDao.findByUsernameWithTrainees(USERNAME)).thenReturn(Optional.of(trainer));
 
         // A trainee reads a trainer's profile: any signed-in user may do it
         assertSame(trainer, trainerService.getProfile(traineeCredentials, USERNAME));

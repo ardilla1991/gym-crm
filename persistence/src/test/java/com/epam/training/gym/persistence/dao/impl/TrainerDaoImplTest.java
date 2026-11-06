@@ -4,6 +4,7 @@ import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.TrainingType;
 import com.epam.training.gym.domain.TrainingTypeName;
+import com.epam.training.gym.persistence.dao.QueryCounter;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import jakarta.persistence.EntityManager;
@@ -110,6 +111,30 @@ public class TrainerDaoImplTest {
         List<Trainer> found = trainerDao.findNotAssignedToTrainee("John.Smith");
 
         assertEquals(Set.of("Anna.Lee", "Mark.Hill"), usernames(found));
+    }
+
+    @Test
+    void findByUsernameWithTrainees_loadsTraineesInSameQuery() {
+        Trainer anna = trainerDao.save(newTrainer("Anna.Lee", yoga));
+        Trainee john = newTrainee("John.Smith");
+        john.getTrainers().add(anna);
+        entityManager.persist(john);
+        flushAndClear();
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        Trainer found = trainerDao.findByUsernameWithTrainees("Anna.Lee").orElseThrow();
+        found.getTrainees().forEach(trainee -> trainee.getUser().getUsername());
+
+        assertEquals(1, found.getTrainees().size());
+        assertEquals(1, queries.count());
+    }
+
+    @Test
+    void findByUsernameWithTrainees_trainerWithoutTrainees_isFound() {
+        trainerDao.save(newTrainer("Anna.Lee", yoga));
+        flushAndClear();
+
+        assertTrue(trainerDao.findByUsernameWithTrainees("Anna.Lee").orElseThrow().getTrainees().isEmpty());
     }
 
     private void flushAndClear() {

@@ -1,15 +1,13 @@
 package com.epam.training.gym.persistence.dao.impl;
 
+import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
 import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
@@ -44,6 +42,7 @@ public class TrainingDaoImpl implements TrainingDao {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Training> query = cb.createQuery(Training.class);
         Root<Training> training = query.from(Training.class);
+        fetchLinks(training);
 
         List<Predicate> conditions = new ArrayList<>();
         conditions.add(cb.equal(training.get("trainee").get("user").get("username"), traineeUsername));
@@ -71,7 +70,7 @@ public class TrainingDaoImpl implements TrainingDao {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Training> query = cb.createQuery(Training.class);
         Root<Training> training = query.from(Training.class);
-
+        fetchLinks(training);
         List<Predicate> conditions = new ArrayList<>();
         conditions.add(cb.equal(training.get("trainer").get("user").get("username"), trainerUsername));
         addDateConditions(cb, training, conditions, criteria.fromDate(), criteria.toDate());
@@ -97,6 +96,20 @@ public class TrainingDaoImpl implements TrainingDao {
         if (toDate != null) {
             conditions.add(cb.lessThanOrEqualTo(training.<LocalDate>get("trainingDate"), toDate));
         }
+    }
+
+    /**
+     * Loads the trainee, the trainer and the training type in the same SQL query as the trainings.
+     * Without it Hibernate loads each linked object with a separate query (the N+1 problem).
+     */
+    private static void fetchLinks(Root<Training> training) {
+        training.fetch("trainee").fetch("user");
+
+        Fetch<Training, Trainer> trainer = training.fetch("trainer");
+        trainer.fetch("user");
+        trainer.fetch("specialization");
+
+        training.fetch("trainingType");
     }
 
 

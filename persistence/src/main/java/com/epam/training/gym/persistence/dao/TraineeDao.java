@@ -13,4 +13,7 @@ public interface TraineeDao {
 
     /** Hard delete: the trainee's user, trainings and trainer assignments are deleted too. */
     void delete(Trainee trainee);
+
+    /** Like findByUsername, but also loads the trainee's trainers: for returning the profile. */
+    Optional<Trainee> findByUsernameWithTrainers(String username);
 }

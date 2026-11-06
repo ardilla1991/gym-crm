@@ -34,11 +34,14 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
     /** Trainee or trainer with this username: the only step that differs. */
     protected abstract Optional<T> findByUsername(String username);
 
+    /** Profile with its linked list loaded: trainee's trainers or trainer's trainees. */
+    protected abstract Optional<T> findProfileByUsername(String username);
+
     @Override
     @Transactional(readOnly = true)
     public T getProfile(Credentials credentials, String username) {
         userAuthenticator.authenticate(credentials);
-        T profile = findByUsername(username)
+        T profile = findProfileByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException(profileName, username));
         log.info("{} profile read: username={}, by={}", profileName, username, credentials.username());
         return profile;

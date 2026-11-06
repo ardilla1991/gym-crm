@@ -44,4 +44,19 @@ public class TraineeDaoImpl implements TraineeDao {
         entityManager.remove(trainee);
         log.debug("Trainee deleted: id={}", trainee.getId());
     }
+
+    @Override
+    public Optional<Trainee> findByUsernameWithTrainers(String username) {
+        return entityManager.createQuery("""
+                    SELECT t FROM Trainee t
+                    JOIN FETCH t.user
+                    LEFT JOIN FETCH t.trainers tr
+                    LEFT JOIN FETCH tr.user
+                    LEFT JOIN FETCH tr.specialization
+                    WHERE t.user.username = :username
+                    """, Trainee.class)
+                .setParameter("username", username)
+                .getResultStream()
+                .findFirst();
+    }
 }

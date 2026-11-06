@@ -74,6 +74,11 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     }
 
     @Override
+    protected Optional<Trainee> findProfileByUsername(String username) {
+        return traineeDao.findByUsernameWithTrainers(username);
+    }
+
+    @Override
     @Transactional
     public Trainee update(Credentials credentials, Trainee newData) {
         entityValidator.validate(newData);

@@ -200,7 +200,7 @@ public class TraineeServiceImplTest {
     @Test
     void getProfile_signedInUser_readsAnotherTraineesProfile() {
         Trainee mary = traineeWithUsername("Mary.Jones");
-        when(traineeDao.findByUsername("Mary.Jones")).thenReturn(Optional.of(mary));
+        when(traineeDao.findByUsernameWithTrainers("Mary.Jones")).thenReturn(Optional.of(mary));
 
         Trainee result = traineeService.getProfile(VALID_CREDENTIALS, "Mary.Jones");
 
@@ -210,7 +210,7 @@ public class TraineeServiceImplTest {
 
     @Test
     void getProfile_unknownUsername_throwsNotFound() {
-        when(traineeDao.findByUsername("User.Name")).thenReturn(Optional.empty());
+        when(traineeDao.findByUsernameWithTrainers("User.Name")).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class,
                 () -> traineeService.getProfile(VALID_CREDENTIALS, "User.Name"));
@@ -223,7 +223,7 @@ public class TraineeServiceImplTest {
         assertThrows(AuthenticationException.class,
                 () -> traineeService.getProfile(WRONG_PASSWORD_CREDENTIALS, "Mary.Jones"));
 
-        verify(traineeDao, never()).findByUsername(any());
+        verify(traineeDao, never()).findByUsernameWithTrainers(any());
     }
 
 // ---------- update ----------

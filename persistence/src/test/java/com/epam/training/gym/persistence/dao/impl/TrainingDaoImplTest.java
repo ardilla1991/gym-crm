@@ -3,6 +3,7 @@ package com.epam.training.gym.persistence.dao.impl;
 import com.epam.training.gym.domain.*;
 import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
+import com.epam.training.gym.persistence.dao.QueryCounter;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import jakarta.persistence.EntityManager;
@@ -207,6 +208,34 @@ public class TrainingDaoImplTest {
         return trainings.stream()
                 .map(Training::getTrainingName)
                 .toList();
+    }
+
+    @Test
+    void findTraineeTrainings_loadsTrainingsWithAllLinksInOneQuery() {
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        trainingDao.findTraineeTrainings("John.Smith", NO_TRAINEE_FILTERS)
+                .forEach(TrainingDaoImplTest::touchAllLinks);
+
+        assertEquals(1, queries.count());
+    }
+
+    @Test
+    void findTrainerTrainings_loadsTrainingsWithAllLinksInOneQuery() {
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        trainingDao.findTrainerTrainings("Anna.Lee", NO_TRAINER_FILTERS)
+                .forEach(TrainingDaoImplTest::touchAllLinks);
+
+        assertEquals(1, queries.count());
+    }
+
+    /** Reads every linked object, so anything not loaded yet is loaded now and counted. */
+    private static void touchAllLinks(Training training) {
+        training.getTrainee().getUser().getUsername();
+        training.getTrainer().getUser().getUsername();
+        training.getTrainer().getSpecialization().getTrainingTypeName();
+        training.getTrainingType().getTrainingTypeName();
     }
 
 }

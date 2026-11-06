@@ -17,4 +17,7 @@ public interface TrainerDao {
 
     /** Trainers that are not in the trainee's trainers list. */
     List<Trainer> findNotAssignedToTrainee(String traineeUsername);
+
+    /** Like findByUsername, but also loads the trainer's trainees: for returning the profile. */
+    Optional<Trainer> findByUsernameWithTrainees(String username);
 }
