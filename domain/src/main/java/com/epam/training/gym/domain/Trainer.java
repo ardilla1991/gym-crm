@@ -32,6 +32,7 @@ public class Trainer implements UserProfile {
     private TrainingType specialization;
 
     /** Saved together with the trainer. */
+    @NotNull
     @Valid
     @OneToOne(cascade = CascadeType.ALL, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)

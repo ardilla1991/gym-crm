@@ -1,5 +1,6 @@
 package com.epam.training.gym.persistence.dao.impl;
 
+import com.epam.training.gym.domain.User;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.UserDao;
 import jakarta.persistence.EntityManager;
@@ -43,6 +44,22 @@ public class UserDaoImplTest {
         entityManager.persist(newUser("Anna", "Lee", "Anna.Lee"));
 
         assertTrue(userDao.findUsernamesStartingWith("John.Smith").isEmpty());
+    }
+
+    @Test
+    void findByUsername_existing_returnsUserFromDatabase() {
+        entityManager.persist(newUser("John", "Smith", "John.Smith"));
+        entityManager.flush();
+        entityManager.clear();
+
+        User found = userDao.findByUsername("John.Smith").orElseThrow();
+
+        assertEquals("John", found.getFirstName());
+    }
+
+    @Test
+    void findByUsername_unknown_returnsEmpty() {
+        assertTrue(userDao.findByUsername("No.Body").isEmpty());
     }
 
 }

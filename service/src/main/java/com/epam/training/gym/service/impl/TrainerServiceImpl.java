@@ -1,9 +1,13 @@
 package com.epam.training.gym.service.impl;
 
 import com.epam.training.gym.domain.Trainer;
+import com.epam.training.gym.domain.Training;
 import com.epam.training.gym.domain.TrainingType;
 import com.epam.training.gym.domain.TrainingTypeName;
+import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
@@ -26,6 +30,7 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     private static final Logger log = LoggerFactory.getLogger(TrainerServiceImpl.class);
 
     private TrainerDao trainerDao;
+    private TrainingDao trainingDao;
     private TrainingTypeDao trainingTypeDao;
     private NewUserDataGenerator newUserDataGenerator;
     private EntityValidator entityValidator;
@@ -37,6 +42,11 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
         this.trainerDao = trainerDao;
+    }
+
+    @Autowired
+    public void setTrainingDao(TrainingDao trainingDao) {
+        this.trainingDao = trainingDao;
     }
 
     @Autowired
@@ -71,37 +81,31 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
         return saved;
     }
 
-    /*
     @Override
-    public Trainer update(Trainer trainer) {
-        Objects.requireNonNull(trainer.getId(), "Trainer id is required for update");
-        Trainer existing = findById(trainer.getId());
-        trainer.setUserId(existing.getUserId());
-        trainer.setUsername(existing.getUsername());
-        trainer.setPassword(existing.getPassword());
+    @Transactional
+    public Trainer update(Credentials credentials, Trainer newData) {
+        // Only the user part is validated: the specialization is not changed, so it may be missing here
+        entityValidator.validate(newData.getUser());
+        Trainer trainer = authenticate(credentials);
 
-        Trainer updated = trainerDao.update(trainer);
-        log.info("Trainer updated: id={}, username={}", updated.getId(), updated.getUsername());
+        trainer.getUser().setFirstName(newData.getUser().getFirstName());
+        trainer.getUser().setLastName(newData.getUser().getLastName());
 
-        return updated;
+        log.info("Trainer profile updated: username={}", credentials.username());
+
+        return trainer;
     }
 
     @Override
-    public Trainer findById(Long id) {
-        log.debug("Looking for trainer id={}", id);
+    @Transactional(readOnly = true)
+    public List<Training> getTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
+        authenticate(credentials);
+        TrainerTrainingCriteria filters = criteria != null ? criteria : TrainerTrainingCriteria.builder().build();
+        List<Training> trainings = trainingDao.findTrainerTrainings(credentials.username(), filters);
+        log.info("Trainer trainings found: username={}, count={}", credentials.username(), trainings.size());
 
-        return trainerDao.findById(id)
-                .orElseThrow(() ->  new EntityNotFoundException("Trainer", id));
+        return trainings;
     }
-
-    @Override
-    public List<Trainer> findAll() {
-        log.debug("Looking for all trainers");
-
-        return trainerDao.findAll();
-    }
-    
-     */
 
     private TrainingType findTrainingType(TrainingTypeName name) {
         return trainingTypeDao.findByName(name)

@@ -1,29 +1,30 @@
 package com.epam.training.gym.service.impl;
 
 import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.User;
+import com.epam.training.gym.domain.Trainer;
+import com.epam.training.gym.domain.Training;
 import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TraineeDao;
+import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.service.TraineeService;
-import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class TraineeServiceImpl extends AbstractProfileService<Trainee>
         implements TraineeService {
 
     private TraineeDao traineeDao;
+    private TrainerDao trainerDao;
+    private TrainingDao trainingDao;
     private NewUserDataGenerator newUserDataGenerator;
     private EntityValidator entityValidator;
 
@@ -34,6 +35,16 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
         this.traineeDao = traineeDao;
+    }
+
+    @Autowired
+    public void setTrainerDao(TrainerDao trainerDao) {
+        this.trainerDao = trainerDao;
+    }
+
+    @Autowired
+    public void setTrainingDao(TrainingDao trainingDao) {
+        this.trainingDao = trainingDao;
     }
 
     @Autowired
@@ -62,45 +73,66 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
         return traineeDao.findByUsername(username);
     }
 
-    /** Keeps userId, username and password of the stored trainee: they are generated, not editable. */
-    /*@Override
-    public Trainee update(Trainee trainee) {
-        Objects.requireNonNull(trainee.getId(), "Trainee id is required for update");
-        Trainee existing = findById(trainee.getId());
-        trainee.setUserId(existing.getUserId());
-        trainee.setUsername(existing.getUsername());
-        trainee.setPassword(existing.getPassword());
+    @Override
+    @Transactional
+    public Trainee update(Credentials credentials, Trainee newData) {
+        entityValidator.validate(newData);
+        Trainee trainee = authenticate(credentials);
 
-        Trainee updated = traineeDao.update(trainee);
-        log.info("Trainee updated: id={}, username={}", updated.getId(), updated.getUsername());
+        // Only these fields come from the caller; id, username, password and status stay as they are
+        trainee.getUser().setFirstName(newData.getUser().getFirstName());
+        trainee.getUser().setLastName(newData.getUser().getLastName());
+        trainee.setDateOfBirth(newData.getDateOfBirth());
+        trainee.setAddress(newData.getAddress());
 
-        return updated;
+        log.info("Trainee profile updated: username={}", credentials.username());
+
+        return trainee;
     }
 
     @Override
-    public void delete(Long id) {
-        if (traineeDao.findById(id).isEmpty()) {
-            log.warn("Trainee with id={} not found, nothing to delete", id);
-            return;
+    @Transactional
+    public void delete(Credentials credentials) {
+        Trainee trainee = authenticate(credentials);
+        traineeDao.delete(trainee);
+        log.info("Trainee deleted: username={}", credentials.username());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Training> getTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
+        authenticate(credentials);
+        TraineeTrainingCriteria filters = criteria != null ? criteria : TraineeTrainingCriteria.builder().build();
+        List<Training> trainings = trainingDao.findTraineeTrainings(credentials.username(), filters);
+        log.info("Trainee trainings found: username={}, count={}", credentials.username(), trainings.size());
+
+        return trainings;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Trainer> getUnassignedTrainers(Credentials credentials) {
+        authenticate(credentials);
+
+        return trainerDao.findNotAssignedToTrainee(credentials.username());
+    }
+
+    @Override
+    @Transactional
+    public List<Trainer> updateTrainers(Credentials credentials, List<String> trainerUsernames) {
+        Trainee trainee = authenticate(credentials);
+
+        Set<String> requested = new HashSet<>(trainerUsernames);
+        List<Trainer> trainers = trainerDao.findByUsernames(requested);
+        if (trainers.size() != requested.size()) {
+            trainers.forEach(trainer -> requested.remove(trainer.getUser().getUsername()));
+            throw new EntityNotFoundException("Trainer", requested);
         }
 
-        traineeDao.delete(id);
-        log.info("Trainee deleted: id={}", id);
+        trainee.getTrainers().clear();
+        trainee.getTrainers().addAll(trainers);
+        log.info("Trainee trainers updated: username={}, trainers={}", credentials.username(), trainerUsernames);
+
+        return trainers;
     }
-
-    @Override
-    public Trainee findById(Long id) {
-        log.debug("Looking for trainee id={}", id);
-
-        return traineeDao.findById(id)
-                .orElseThrow(() ->  new EntityNotFoundException("Trainee", id));
-    }
-
-    @Override
-    public List<Trainee> findAll() {
-        log.debug("Looking for all trainees");
-
-        return traineeDao.findAll();
-    }
-     */
 }

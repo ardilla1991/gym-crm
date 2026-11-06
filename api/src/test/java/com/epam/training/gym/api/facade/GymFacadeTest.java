@@ -4,6 +4,8 @@ import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
 import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;
@@ -27,6 +29,7 @@ public class GymFacadeTest {
 
     private static final Credentials CREDENTIALS = new Credentials("John.Smith", "abcdefghij");
     private static final String NEW_PASSWORD = "newPass123";
+    private static final String OTHER_USERNAME = "Mary.Jones";
 
     @Mock
     private TraineeService traineeService;
@@ -74,38 +77,7 @@ public class GymFacadeTest {
 
         assertFalse(facade.toggleTraineeActive(CREDENTIALS));
     }
-/*
-    @Test
-    void updateTrainee_delegatesToService() {
-        Trainee trainee = new Trainee();
-        when(traineeService.update(trainee)).thenReturn(trainee);
 
-        assertSame(trainee, facade.updateTrainee(trainee));
-    }
-
-    @Test
-    void deleteTrainee_delegatesToService() {
-        facade.deleteTrainee(1L);
-
-        verify(traineeService).delete(1L);
-    }
-
-    @Test
-    void findTrainee_delegatesToService() {
-        Trainee trainee = new Trainee();
-        when(traineeService.findById(1L)).thenReturn(trainee);
-
-        assertSame(trainee, facade.findTrainee(1L));
-    }
-
-    @Test
-    void findAllTrainees_delegatesToService() {
-        List<Trainee> trainees = List.of(new Trainee());
-        when(traineeService.findAll()).thenReturn(trainees);
-
-        assertSame(trainees, facade.findAllTrainees());
-    }
-*/
     // ---------- Trainer ----------
 
     @Test
@@ -136,56 +108,96 @@ public class GymFacadeTest {
 
         assertTrue(facade.toggleTrainerActive(CREDENTIALS));
     }
-/*
+
+    // ---------- profiles ----------
+
     @Test
-    void updateTrainer_delegatesToService() {
+    void getTraineeProfile_returnsServiceResult() {
+        Trainee trainee = new Trainee();
+        when(traineeService.getProfile(CREDENTIALS, OTHER_USERNAME)).thenReturn(trainee);
+
+        assertSame(trainee, facade.getTraineeProfile(CREDENTIALS, OTHER_USERNAME));
+    }
+
+    @Test
+    void getTrainerProfile_returnsServiceResult() {
         Trainer trainer = new Trainer();
-        when(trainerService.update(trainer)).thenReturn(trainer);
+        when(trainerService.getProfile(CREDENTIALS, OTHER_USERNAME)).thenReturn(trainer);
 
-        assertSame(trainer, facade.updateTrainer(trainer));
+        assertSame(trainer, facade.getTrainerProfile(CREDENTIALS, OTHER_USERNAME));
+    }
+
+// ---------- update, delete ----------
+
+    @Test
+    void updateTrainee_returnsServiceResult() {
+        Trainee newData = new Trainee();
+        Trainee updated = new Trainee();
+        when(traineeService.update(CREDENTIALS, newData)).thenReturn(updated);
+
+        assertSame(updated, facade.updateTrainee(CREDENTIALS, newData));
     }
 
     @Test
-    void findTrainer_delegatesToService() {
-        Trainer trainer = new Trainer();
-        when(trainerService.findById(1L)).thenReturn(trainer);
+    void updateTrainer_returnsServiceResult() {
+        Trainer newData = new Trainer();
+        Trainer updated = new Trainer();
+        when(trainerService.update(CREDENTIALS, newData)).thenReturn(updated);
 
-        assertSame(trainer, facade.findTrainer(1L));
+        assertSame(updated, facade.updateTrainer(CREDENTIALS, newData));
     }
 
     @Test
-    void findAllTrainers_delegatesToService() {
-        List<Trainer> trainers = List.of(new Trainer());
-        when(trainerService.findAll()).thenReturn(trainers);
+    void deleteTrainee_delegatesToService() {
+        facade.deleteTrainee(CREDENTIALS);
 
-        assertSame(trainers, facade.findAllTrainers());
+        verify(traineeService).delete(CREDENTIALS);
     }
 
-    // ---------- Training ----------
+// ---------- trainings ----------
 
     @Test
-    void createTraining_delegatesToService() {
-        Training training = new Training();
-        when(trainingService.create(training)).thenReturn(training);
-
-        assertSame(training, facade.createTraining(training));
-    }
-
-    @Test
-    void findTraining_delegatesToService() {
-        Training training = new Training();
-        when(trainingService.findById(1L)).thenReturn(training);
-
-        assertSame(training, facade.findTraining(1L));
-    }
-
-    @Test
-    void findAllTrainings_delegatesToService() {
+    void getTraineeTrainings_returnsServiceResult() {
+        TraineeTrainingCriteria criteria = TraineeTrainingCriteria.builder().build();
         List<Training> trainings = List.of(new Training());
-        when(trainingService.findAll()).thenReturn(trainings);
+        when(traineeService.getTrainings(CREDENTIALS, criteria)).thenReturn(trainings);
 
-        assertSame(trainings, facade.findAllTrainings());
+        assertSame(trainings, facade.getTraineeTrainings(CREDENTIALS, criteria));
     }
 
- */
+    @Test
+    void getTrainerTrainings_returnsServiceResult() {
+        TrainerTrainingCriteria criteria = TrainerTrainingCriteria.builder().build();
+        List<Training> trainings = List.of(new Training());
+        when(trainerService.getTrainings(CREDENTIALS, criteria)).thenReturn(trainings);
+
+        assertSame(trainings, facade.getTrainerTrainings(CREDENTIALS, criteria));
+    }
+
+    @Test
+    void addTraining_returnsServiceResult() {
+        Training training = new Training();
+        when(trainingService.addTraining(CREDENTIALS, "Anna.Lee", training)).thenReturn(training);
+
+        assertSame(training, facade.addTraining(CREDENTIALS, "Anna.Lee", training));
+    }
+
+// ---------- trainee's trainers ----------
+
+    @Test
+    void getUnassignedTrainers_returnsServiceResult() {
+        List<Trainer> trainers = List.of(new Trainer());
+        when(traineeService.getUnassignedTrainers(CREDENTIALS)).thenReturn(trainers);
+
+        assertSame(trainers, facade.getUnassignedTrainers(CREDENTIALS));
+    }
+
+    @Test
+    void updateTraineeTrainers_returnsServiceResult() {
+        List<String> usernames = List.of("Anna.Lee");
+        List<Trainer> trainers = List.of(new Trainer());
+        when(traineeService.updateTrainers(CREDENTIALS, usernames)).thenReturn(trainers);
+
+        assertSame(trainers, facade.updateTraineeTrainers(CREDENTIALS, usernames));
+    }
 }

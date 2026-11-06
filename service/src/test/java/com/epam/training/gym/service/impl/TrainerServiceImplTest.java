@@ -1,16 +1,17 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.TrainingType;
-import com.epam.training.gym.domain.TrainingTypeName;
-import com.epam.training.gym.domain.User;
+import com.epam.training.gym.domain.*;
 import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
+import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -36,6 +38,12 @@ public class TrainerServiceImplTest {
 
     @Mock
     private TrainerDao trainerDao;
+
+    @Mock
+    private TrainingDao trainingDao;
+
+    @Mock
+    private UserAuthenticator userAuthenticator;
 
     @Mock
     private TrainingTypeDao trainingTypeDao;
@@ -185,62 +193,69 @@ public class TrainerServiceImplTest {
                 .user(User.builder().firstName("Anna").lastName("Lee").build())
                 .build();
     }
-/*
+
+    // ---------- getProfile ----------
+
     @Test
-    void update_keepsGeneratedDataOfStoredTrainer() {
-        Trainer stored = Trainer.builder()
-                .id(1L).userId(7L).username("Chris.Taylor").password("Secret1234").firstName("Chris")
+    void getProfile_signedInUser_readsTrainerProfile() {
+        Trainer trainer = existingTrainer(true);
+        Credentials traineeCredentials = new Credentials("John.Smith", "abcdef1234");
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+
+        // A trainee reads a trainer's profile: any signed-in user may do it
+        assertSame(trainer, trainerService.getProfile(traineeCredentials, USERNAME));
+        verify(userAuthenticator).authenticate(traineeCredentials);
+    }
+
+// ---------- update ----------
+
+    @Test
+    void update_changesNamesAndKeepsSpecialization() {
+        Trainer trainer = existingTrainer(true);
+        TrainingType specialization = trainer.getSpecialization();
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+        Trainer newData = Trainer.builder()
+                .specialization(new TrainingType(1L, TrainingTypeName.FITNESS))   // must be ignored
+                .user(User.builder().firstName("Annie").lastName("Leigh").build())
                 .build();
-        Trainer changes = Trainer.builder().id(1L).firstName("Christopher").build();
-        when(trainerDao.findById(1L)).thenReturn(Optional.of(stored));
-        when(trainerDao.update(changes)).thenReturn(changes);
 
-        Trainer updated = trainerService.update(changes);
+        trainerService.update(VALID_CREDENTIALS, newData);
 
-        assertEquals("Christopher", updated.getFirstName());
-        assertEquals(7L, updated.getUserId());
-        assertEquals("Chris.Taylor", updated.getUsername());
-        assertEquals("Secret1234", updated.getPassword());
+        assertEquals("Annie", trainer.getUser().getFirstName());
+        assertEquals("Leigh", trainer.getUser().getLastName());
+        assertSame(specialization, trainer.getSpecialization());
+        assertEquals(USERNAME, trainer.getUser().getUsername());
     }
 
     @Test
-    void update_unknownId_throwsExceptionAndDoesNotSave() {
-        Trainer unknown = Trainer.builder().id(99L).build();
-        when(trainerDao.findById(99L)).thenReturn(Optional.empty());
+    void update_invalidNames_isRejectedBeforeDatabaseAccess() {
+        Trainer newData = Trainer.builder().user(User.builder().build()).build();
+        doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(newData.getUser());
 
-        assertThrows(EntityNotFoundException.class, () -> trainerService.update(unknown));
-        verify(trainerDao, never()).update(any());
+        assertThrows(ConstraintViolationException.class, () -> trainerService.update(VALID_CREDENTIALS, newData));
+
+        verify(trainerDao, never()).findByUsername(any());
+    }
+
+// ---------- getTrainings ----------
+
+    @Test
+    void getTrainings_passesUsernameAndCriteriaToDao() {
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
+        TrainerTrainingCriteria criteria = TrainerTrainingCriteria.builder().traineeName("John").build();
+        List<Training> trainings = List.of(new Training());
+        when(trainingDao.findTrainerTrainings(USERNAME, criteria)).thenReturn(trainings);
+
+        assertSame(trainings, trainerService.getTrainings(VALID_CREDENTIALS, criteria));
     }
 
     @Test
-    void update_withoutId_throwsException() {
-        Trainer withoutId = Trainer.builder().firstName("Chris").build();
+    void getTrainings_nullCriteria_meansNoFilters() {
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
+        when(trainingDao.findTrainerTrainings(USERNAME, TrainerTrainingCriteria.builder().build()))
+                .thenReturn(List.of());
 
-        assertThrows(NullPointerException.class, () -> trainerService.update(withoutId));
+        assertTrue(trainerService.getTrainings(VALID_CREDENTIALS, null).isEmpty());
     }
 
-    @Test
-    void findById_existingId_returnsTrainer() {
-        Trainer chris = Trainer.builder().id(1L).build();
-        when(trainerDao.findById(1L)).thenReturn(Optional.of(chris));
-
-        assertSame(chris, trainerService.findById(1L));
-    }
-
-    @Test
-    void findById_unknownId_throwsException() {
-        when(trainerDao.findById(99L)).thenReturn(Optional.empty());
-
-        assertThrows(EntityNotFoundException.class, () -> trainerService.findById(99L));
-    }
-
-    @Test
-    void findAll_returnsTrainersFromDao() {
-        List<Trainer> trainers = List.of(Trainer.builder().id(1L).build());
-        when(trainerDao.findAll()).thenReturn(trainers);
-
-        assertEquals(trainers, trainerService.findAll());
-    }
-
-     */
 }

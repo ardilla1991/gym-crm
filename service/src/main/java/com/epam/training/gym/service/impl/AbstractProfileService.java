@@ -4,6 +4,8 @@ import com.epam.training.gym.domain.User;
 import com.epam.training.gym.domain.UserProfile;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.service.AccountService;
+import com.epam.training.gym.service.auth.UserAuthenticator;
+import com.epam.training.gym.service.exception.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,12 +18,14 @@ import java.util.Optional;
  * Account operations shared by trainee and trainer services (Template Method):
  * subclasses only say where to find a profile by username.
  */
-public abstract class AbstractProfileService <T extends UserProfile> implements AccountService {
+public abstract class AbstractProfileService <T extends UserProfile> implements AccountService<T> {
 
     /** Named after the real class: TraineeServiceImpl or TrainerServiceImpl. */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     private final String profileName;
+
+    private UserAuthenticator userAuthenticator;
 
     protected AbstractProfileService(String profileName) {
         this.profileName = profileName;
@@ -29,6 +33,16 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
 
     /** Trainee or trainer with this username: the only step that differs. */
     protected abstract Optional<T> findByUsername(String username);
+
+    @Override
+    @Transactional(readOnly = true)
+    public T getProfile(Credentials credentials, String username) {
+        userAuthenticator.authenticate(credentials);
+        T profile = findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException(profileName, username));
+        log.info("{} profile read: username={}, by={}", profileName, username, credentials.username());
+        return profile;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -58,7 +72,9 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
     }
 
     /** Loads the profile if the credentials are right; every operation except create starts with it. */
-    protected T authenticate(Credentials credentials) {
+    @Override
+    @Transactional
+    public T authenticate(Credentials credentials) {
         return findWithCredentials(credentials).orElseThrow(() -> {
             log.warn("{} authentication failed: username={}", profileName, credentials.username());
             return new AuthenticationException();

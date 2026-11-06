@@ -4,6 +4,8 @@ import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
 import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;
@@ -57,48 +59,48 @@ public class GymFacade {
         return trainerService.toggleActive(credentials);
     }
 
-    /*public Trainee updateTrainee(Trainee trainee) {
-        return traineeService.update(trainee);
+    public Trainee getTraineeProfile(Credentials credentials, String username) {
+        return traineeService.getProfile(credentials, username);
     }
 
-    public void deleteTrainee(Long id) {
-        traineeService.delete(id);
+    public Trainer getTrainerProfile(Credentials credentials, String username) {
+        return trainerService.getProfile(credentials, username);
     }
-
-    public Trainee findTrainee(Long id) {
-        return traineeService.findById(id);
-    }
-
-    public List<Trainee> findAllTrainees() {
-        return traineeService.findAll();
-    }*/
 
     public Trainer createTrainer(Trainer trainer) {
         return trainerService.create(trainer);
     }
 
-    /*public Trainer updateTrainer(Trainer trainer) {
-        return trainerService.update(trainer);
+    public Trainee updateTrainee(Credentials credentials, Trainee newData) {
+        return traineeService.update(credentials, newData);
     }
 
-    public Trainer findTrainer(Long id) {
-        return trainerService.findById(id);
+    public Trainer updateTrainer(Credentials credentials, Trainer newData) {
+        return trainerService.update(credentials, newData);
     }
 
-    public List<Trainer> findAllTrainers() {
-        return trainerService.findAll();
+    public void deleteTrainee(Credentials credentials) {
+        traineeService.delete(credentials);
     }
 
-    public Training createTraining(Training training) {
-        return trainingService.create(training);
+    public List<Training> getTraineeTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
+        return traineeService.getTrainings(credentials, criteria);
     }
 
-    public Training findTraining(Long id) {
-        return trainingService.findById(id);
+    public List<Training> getTrainerTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
+        return trainerService.getTrainings(credentials, criteria);
     }
 
-    public List<Training> findAllTrainings() {
-        return trainingService.findAll();
-    }*/
+    public Training addTraining(Credentials traineeCredentials, String trainerUsername, Training training) {
+        return trainingService.addTraining(traineeCredentials, trainerUsername, training);
+    }
+
+    public List<Trainer> getUnassignedTrainers(Credentials credentials) {
+        return traineeService.getUnassignedTrainers(credentials);
+    }
+
+    public List<Trainer> updateTraineeTrainers(Credentials credentials, List<String> trainerUsernames) {
+        return traineeService.updateTrainers(credentials, trainerUsernames);
+    }
 
 }
