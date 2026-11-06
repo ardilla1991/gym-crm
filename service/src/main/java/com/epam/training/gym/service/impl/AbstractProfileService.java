@@ -8,6 +8,7 @@ import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.epam.training.gym.service.exception.AuthenticationException;
@@ -29,6 +30,11 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
 
     protected AbstractProfileService(String profileName) {
         this.profileName = profileName;
+    }
+
+    @Autowired
+    public void setUserAuthenticator(UserAuthenticator userAuthenticator) {
+        this.userAuthenticator = userAuthenticator;
     }
 
     /** Trainee or trainer with this username: the only step that differs. */
