@@ -5,7 +5,7 @@ import com.epam.training.gym.service.exception.EntityNotFoundException;
 
 import java.util.List;
 
-public interface TrainerService {
+public interface TrainerService extends AccountService {
     /**
      * Creates a trainer profile with a generated username and password.
      * Only the name of the specialization is used: the type itself is taken from the database.

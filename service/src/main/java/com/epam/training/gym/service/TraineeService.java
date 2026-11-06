@@ -5,7 +5,7 @@ import com.epam.training.gym.service.exception.EntityNotFoundException;
 
 import java.util.List;
 
-public interface TraineeService {
+public interface TraineeService extends AccountService {
     /**
      * Creates a trainee profile with a generated username and password.
      * @return the saved trainee; its user holds the generated username and password

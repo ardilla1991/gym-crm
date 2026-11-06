@@ -1,8 +1,11 @@
 package com.epam.training.gym.service.impl;
 
 import com.epam.training.gym.domain.Trainee;
+import com.epam.training.gym.domain.User;
+import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.service.TraineeService;
+import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
@@ -14,15 +17,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
-public class TraineeServiceImpl implements TraineeService {
-
-    private static final Logger log = LoggerFactory.getLogger(TraineeServiceImpl.class);
+public class TraineeServiceImpl extends AbstractProfileService<Trainee>
+        implements TraineeService {
 
     private TraineeDao traineeDao;
     private NewUserDataGenerator newUserDataGenerator;
     private EntityValidator entityValidator;
+
+    public TraineeServiceImpl() {
+        super("Trainee");
+    }
 
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
@@ -48,6 +55,11 @@ public class TraineeServiceImpl implements TraineeService {
         log.info("Trainee created: id={}, username={}", saved.getId(), saved.getUser().getUsername());
 
         return saved;
+    }
+
+    @Override
+    protected Optional<Trainee> findByUsername(String username) {
+        return traineeDao.findByUsername(username);
     }
 
     /** Keeps userId, username and password of the stored trainee: they are generated, not editable. */

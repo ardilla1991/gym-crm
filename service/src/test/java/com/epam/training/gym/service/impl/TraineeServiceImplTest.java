@@ -2,7 +2,9 @@ package com.epam.training.gym.service.impl;
 
 import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.User;
+import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.persistence.dao.TraineeDao;
+import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
@@ -24,6 +26,14 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class TraineeServiceImplTest {
+
+    private static final String USERNAME = "John.Smith";
+    private static final String CURRENT_PASSWORD = "abcdef1234";
+    private static final String NEW_PASSWORD = "newPass123";
+
+    private static final Credentials VALID_CREDENTIALS = new Credentials(USERNAME, CURRENT_PASSWORD);
+    private static final Credentials WRONG_PASSWORD_CREDENTIALS = new Credentials(USERNAME, "wrong");
+
     @Mock
     private TraineeDao traineeDao;
 
@@ -66,6 +76,105 @@ public class TraineeServiceImplTest {
                 .user(User.builder().firstName("John").lastName("Smith").build())
                 .build();
     }
+
+    // ---------- matchCredentials ----------
+
+    @Test
+    void matchCredentials_rightPassword_returnsTrue() {
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
+
+        assertTrue(traineeService.matchCredentials(VALID_CREDENTIALS));
+    }
+
+    @Test
+    void matchCredentials_wrongPassword_returnsFalse() {
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
+
+        assertFalse(traineeService.matchCredentials(WRONG_PASSWORD_CREDENTIALS));
+    }
+
+    @Test
+    void matchCredentials_unknownUsername_returnsFalse() {
+        when(traineeDao.findByUsername("User.Name")).thenReturn(Optional.empty());
+
+        assertFalse(traineeService.matchCredentials(new Credentials("User.Name", CURRENT_PASSWORD)));
+    }
+
+// ---------- changePassword ----------
+
+    @Test
+    void changePassword_rightCredentials_setsNewPassword() {
+        Trainee trainee = existingTrainee(true);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+        traineeService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD );
+
+        assertEquals(NEW_PASSWORD, trainee.getUser().getPassword());
+    }
+
+    @Test
+    void changePassword_wrongPassword_throwsAndKeepsOldPassword() {
+        Trainee trainee = existingTrainee(true);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+        assertThrows(AuthenticationException.class,
+                () -> traineeService.changePassword(WRONG_PASSWORD_CREDENTIALS, NEW_PASSWORD));
+
+        assertEquals(CURRENT_PASSWORD, trainee.getUser().getPassword());
+    }
+
+    @Test
+    void changePassword_blankNewPassword_throwsWithoutDatabaseAccess() {
+        assertThrows(IllegalArgumentException.class, () -> traineeService.changePassword(VALID_CREDENTIALS, " "));
+
+        verify(traineeDao, never()).findByUsername(any());
+    }
+
+// ---------- toggleActive ----------
+
+    @Test
+    void toggleActive_activeTrainee_becomesInactive() {
+        Trainee trainee = existingTrainee(true);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+        assertFalse(traineeService.toggleActive(VALID_CREDENTIALS));
+        assertFalse(trainee.getUser().isActive());
+    }
+
+    @Test
+    void toggleActive_calledTwice_returnsToOriginalStatus() {
+        Trainee trainee = existingTrainee(false);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+        assertTrue(traineeService.toggleActive(VALID_CREDENTIALS));      // inactive -> active
+        assertFalse(traineeService.toggleActive(VALID_CREDENTIALS));     // active -> inactive: not idempotent
+    }
+
+    @Test
+    void toggleActive_wrongPassword_throwsAndKeepsStatus() {
+        Trainee trainee = existingTrainee(true);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+        assertThrows(AuthenticationException.class, () -> traineeService.toggleActive(WRONG_PASSWORD_CREDENTIALS));
+
+        assertTrue(trainee.getUser().isActive());
+    }
+
+    /** A trainee as if loaded from the database: with username and password. */
+    private static Trainee existingTrainee(boolean active) {
+        return Trainee.builder()
+                .id(1L)
+                .user(User.builder()
+                        .id(1L)
+                        .firstName("John")
+                        .lastName("Smith")
+                        .username(USERNAME)
+                        .password(CURRENT_PASSWORD)
+                        .isActive(active)
+                        .build())
+                .build();
+    }
+
 /*
     @Test
     void update_keepsGeneratedDataOfStoredTrainee() {

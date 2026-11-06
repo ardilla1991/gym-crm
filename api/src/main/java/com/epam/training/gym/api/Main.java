@@ -3,6 +3,7 @@ package com.epam.training.gym.api;
 import com.epam.training.gym.api.facade.GymFacade;
 import com.epam.training.gym.config.AppConfig;
 import com.epam.training.gym.domain.*;
+import com.epam.training.gym.domain.auth.Credentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -44,6 +45,15 @@ public class Main {
                     .user(User.builder().firstName("Emily").lastName("Johnson").build())
                     .build());
             log.info("Created trainee: {}", trainee1.getUser().getUsername());
+
+            Credentials credentials = new Credentials(trainee.getUser().getUsername(), trainee.getUser().getPassword());
+            log.info("Credentials match: {}", facade.matchTraineeCredentials(credentials));
+
+            facade.changeTraineePassword(credentials, "newPass123");
+            Credentials newCredentials = new Credentials(credentials.username(), "newPass123");
+
+            log.info("Trainee active: {}", facade.toggleTraineeActive(newCredentials));
+            log.info("Old password still works: {}", facade.matchTraineeCredentials(credentials));
 
             log.info("--- Create a trainer ---");
             Trainer trainer = facade.createTrainer(Trainer.builder()

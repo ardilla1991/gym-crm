@@ -17,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
-public class TrainerServiceImpl implements TrainerService {
+public class TrainerServiceImpl extends AbstractProfileService<Trainer>
+        implements TrainerService {
 
     private static final Logger log = LoggerFactory.getLogger(TrainerServiceImpl.class);
 
@@ -27,6 +29,10 @@ public class TrainerServiceImpl implements TrainerService {
     private TrainingTypeDao trainingTypeDao;
     private NewUserDataGenerator newUserDataGenerator;
     private EntityValidator entityValidator;
+
+    public TrainerServiceImpl() {
+        super("Trainer");
+    }
 
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
@@ -46,6 +52,11 @@ public class TrainerServiceImpl implements TrainerService {
     @Autowired
     public void setEntityValidator(EntityValidator entityValidator) {
         this.entityValidator = entityValidator;
+    }
+
+    @Override
+    protected Optional<Trainer> findByUsername(String username) {
+        return trainerDao.findByUsername(username);
     }
 
     @Override

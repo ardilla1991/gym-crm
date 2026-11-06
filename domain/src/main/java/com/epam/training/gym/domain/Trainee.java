@@ -22,7 +22,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @ToString
-public class Trainee {
+public class Trainee implements UserProfile {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

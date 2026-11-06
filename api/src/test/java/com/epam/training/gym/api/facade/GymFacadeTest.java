@@ -3,6 +3,7 @@ package com.epam.training.gym.api.facade;
 import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;
@@ -14,7 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +24,10 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 public class GymFacadeTest {
+
+    private static final Credentials CREDENTIALS = new Credentials("John.Smith", "abcdefghij");
+    private static final String NEW_PASSWORD = "newPass123";
+
     @Mock
     private TraineeService traineeService;
 
@@ -47,6 +52,27 @@ public class GymFacadeTest {
         when(traineeService.create(trainee)).thenReturn(trainee);
 
         assertSame(trainee, facade.createTrainee(trainee));
+    }
+
+    @Test
+    void matchTraineeCredentials_returnsServiceResult() {
+        when(traineeService.matchCredentials(CREDENTIALS)).thenReturn(true);
+
+        assertTrue(facade.matchTraineeCredentials(CREDENTIALS));
+    }
+
+    @Test
+    void changeTraineePassword_delegatesToService() {
+        facade.changeTraineePassword(CREDENTIALS, NEW_PASSWORD);
+
+        verify(traineeService).changePassword(CREDENTIALS, NEW_PASSWORD);
+    }
+
+    @Test
+    void toggleTraineeActive_returnsServiceResult() {
+        when(traineeService.toggleActive(CREDENTIALS)).thenReturn(false);
+
+        assertFalse(facade.toggleTraineeActive(CREDENTIALS));
     }
 /*
     @Test
@@ -88,6 +114,27 @@ public class GymFacadeTest {
         when(trainerService.create(trainer)).thenReturn(trainer);
 
         assertSame(trainer, facade.createTrainer(trainer));
+    }
+
+    @Test
+    void matchTrainerCredentials_returnsServiceResult() {
+        when(trainerService.matchCredentials(CREDENTIALS)).thenReturn(false);
+
+        assertFalse(facade.matchTrainerCredentials(CREDENTIALS));
+    }
+
+    @Test
+    void changeTrainerPassword_delegatesToService() {
+        facade.changeTrainerPassword(CREDENTIALS, NEW_PASSWORD);
+
+        verify(trainerService).changePassword(CREDENTIALS, NEW_PASSWORD);
+    }
+
+    @Test
+    void toggleTrainerActive_returnsServiceResult() {
+        when(trainerService.toggleActive(CREDENTIALS)).thenReturn(true);
+
+        assertTrue(facade.toggleTrainerActive(CREDENTIALS));
     }
 /*
     @Test

@@ -3,6 +3,7 @@ package com.epam.training.gym.api.facade;
 import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;
@@ -30,6 +31,30 @@ public class GymFacade {
 
     public Trainee createTrainee(Trainee trainee) {
         return traineeService.create(trainee);
+    }
+
+    public boolean matchTraineeCredentials(Credentials credentials) {
+        return traineeService.matchCredentials(credentials);
+    }
+
+    public boolean matchTrainerCredentials(Credentials credentials) {
+        return trainerService.matchCredentials(credentials);
+    }
+
+    public void changeTraineePassword(Credentials credentials, String newPassword) {
+        traineeService.changePassword(credentials, newPassword);
+    }
+
+    public void changeTrainerPassword(Credentials credentials, String newPassword) {
+        trainerService.changePassword(credentials, newPassword);
+    }
+
+    public boolean toggleTraineeActive(Credentials credentials) {
+        return traineeService.toggleActive(credentials);
+    }
+
+    public boolean toggleTrainerActive(Credentials credentials) {
+        return trainerService.toggleActive(credentials);
     }
 
     /*public Trainee updateTrainee(Trainee trainee) {
