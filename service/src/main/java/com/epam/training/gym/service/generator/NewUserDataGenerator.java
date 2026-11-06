@@ -3,6 +3,7 @@ package com.epam.training.gym.service.generator;
 import com.epam.training.gym.domain.User;
 import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.persistence.dao.UserDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -26,18 +27,11 @@ public class NewUserDataGenerator {
     /** SecureRandom instead of Random: passwords must not be predictable. */
     private final SecureRandom random = new SecureRandom();
 
-    private TraineeDao traineeDao;
-    private TrainerDao trainerDao;
-
+    private UserDao userDao;
 
     @Autowired
-    public void setTraineeDao(TraineeDao traineeDao) {
-        this.traineeDao = traineeDao;
-    }
-
-    @Autowired
-    public void setTrainerDao(TrainerDao trainerDao) {
-        this.trainerDao = trainerDao;
+    public void setUserDao(UserDao userDao) {
+        this.userDao = userDao;
     }
 
     /**
@@ -48,21 +42,15 @@ public class NewUserDataGenerator {
     public String generateUsername(String firstName, String lastName) {
         String baseUsername = firstName + USERNAME_SEPARATOR + lastName;
 
-        Set<String> takenUsernames = new HashSet<>();
-        for (User user : allUsers()) {
-            takenUsernames.add(user.getUsername());
-        }
-
-        if (!takenUsernames.contains(baseUsername)) {
+        Set<String> taken = new HashSet<>(userDao.findUsernamesStartingWith(baseUsername));
+        if (!taken.contains(baseUsername)) {
             return baseUsername;
         }
-
-        int suffix = 1;
-        while (takenUsernames.contains(baseUsername + suffix)) {
-            suffix++;
+        int number = 1;
+        while (taken.contains(baseUsername + number)) {
+            number++;
         }
-
-        return baseUsername + suffix;
+        return baseUsername + number;
     }
 
     /** Random string of 10 characters. */
@@ -75,34 +63,11 @@ public class NewUserDataGenerator {
         return password.toString();
     }
 
-    /**  The biggest one Usser id + 1. */
-    public Long nextUserId() {
-        long max = 0;
-        for (User user : allUsers()) {
-            if (user.getUserId() != null && user.getUserId() > max) {
-                max = user.getUserId();
-            }
-        }
-
-        return max + 1;
-    }
-
-    /** Fills the generated part of a new profile: userId, username and password.
-     * A new profile is active. */
+    /** Sets a unique username, a random password and the active status. */
     public void fillNewUserData(User user) {
-        user.setUserId(nextUserId());
         user.setUsername(generateUsername(user.getFirstName(), user.getLastName()));
         user.setPassword(generatePassword());
         user.setActive(true);
     }
-
-    private List<User> allUsers() {
-        List<User> users = new ArrayList<>();
-        users.addAll(traineeDao.findAll());
-        users.addAll(trainerDao.findAll());
-
-        return users;
-    }
-
 
 }

@@ -1,6 +1,7 @@
 package com.epam.training.gym.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.Valid;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -38,6 +39,7 @@ public class Trainee {
     private String address;
 
     /** Saved and deleted together with the trainee. */
+    @Valid
     @OneToOne(cascade = CascadeType.ALL, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;

@@ -32,7 +32,7 @@ public class GymFacade {
         return traineeService.create(trainee);
     }
 
-    public Trainee updateTrainee(Trainee trainee) {
+    /*public Trainee updateTrainee(Trainee trainee) {
         return traineeService.update(trainee);
     }
 
@@ -46,13 +46,13 @@ public class GymFacade {
 
     public List<Trainee> findAllTrainees() {
         return traineeService.findAll();
-    }
+    }*/
 
     public Trainer createTrainer(Trainer trainer) {
         return trainerService.create(trainer);
     }
 
-    public Trainer updateTrainer(Trainer trainer) {
+    /*public Trainer updateTrainer(Trainer trainer) {
         return trainerService.update(trainer);
     }
 
@@ -74,6 +74,6 @@ public class GymFacade {
 
     public List<Training> findAllTrainings() {
         return trainingService.findAll();
-    }
+    }*/
 
 }

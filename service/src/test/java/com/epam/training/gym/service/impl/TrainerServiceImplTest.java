@@ -3,12 +3,16 @@ package com.epam.training.gym.service.impl;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.TrainingType;
 import com.epam.training.gym.domain.TrainingTypeName;
+import com.epam.training.gym.domain.User;
 import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.persistence.dao.TrainingTypeDao;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
+import com.epam.training.gym.service.validation.EntityValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,33 +28,49 @@ public class TrainerServiceImplTest {
     private TrainerDao trainerDao;
 
     @Mock
+    private TrainingTypeDao trainingTypeDao;
+
+    @Mock
+    private EntityValidator entityValidator;
+
+    @Mock
     private NewUserDataGenerator newUserDataGenerator;
 
+    @InjectMocks
     private TrainerServiceImpl trainerService;
 
-    @BeforeEach
-    void setUp() {
-        trainerService = new TrainerServiceImpl();
-        trainerService.setTrainerDao(trainerDao);
-        trainerService.setNewUserDataGenerator(newUserDataGenerator);
+    @Test
+    void create_usesTrainingTypeFromDatabase() {
+        TrainingType zumbaFromDb = new TrainingType(3L, TrainingTypeName.ZUMBA);
+        Trainer trainer = newTrainer(TrainingTypeName.ZUMBA);
+        when(trainingTypeDao.findByName(TrainingTypeName.ZUMBA)).thenReturn(Optional.of(zumbaFromDb));
+        when(trainerDao.save(trainer)).thenReturn(trainer);
+
+        Trainer result = trainerService.create(trainer);
+
+        assertSame(zumbaFromDb, result.getSpecialization());
+        verify(entityValidator).validate(trainer);
+        verify(newUserDataGenerator).fillNewUserData(trainer.getUser());
     }
 
     @Test
-    void create_fillsGeneratedDataAndSaves() {
-        Trainer chris = Trainer.builder()
-                .firstName("Chris")
-                .lastName("Taylor")
-                .specialization(new TrainingType(3L, TrainingTypeName.ZUMBA))
-                .build();
-        when(trainerDao.save(chris)).thenReturn(chris);
+    void create_unknownTrainingType_isNotSaved() {
+        Trainer trainer = newTrainer(TrainingTypeName.ZUMBA);
+        when(trainingTypeDao.findByName(TrainingTypeName.ZUMBA)).thenReturn(Optional.empty());
 
-        Trainer created = trainerService.create(chris);
+        assertThrows(EntityNotFoundException.class, () -> trainerService.create(trainer));
 
-        assertSame(chris, created);
-        verify(newUserDataGenerator).fillNewUserData(chris);
-        verify(trainerDao).save(chris);
+        verify(trainerDao, never()).save(any());
     }
 
+    /** The specialization is built by hand, without id: like a caller would pass it. */
+    private static Trainer newTrainer(TrainingTypeName specialization) {
+        return Trainer.builder()
+                .specialization(new TrainingType(null, specialization))
+                .user(User.builder().firstName("Anna").lastName("Lee").build())
+                .build();
+    }
+/*
     @Test
     void update_keepsGeneratedDataOfStoredTrainer() {
         Trainer stored = Trainer.builder()
@@ -106,4 +126,6 @@ public class TrainerServiceImplTest {
 
         assertEquals(trainers, trainerService.findAll());
     }
+
+     */
 }

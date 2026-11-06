@@ -1,6 +1,7 @@
 package com.epam.training.gym.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 /**
@@ -20,9 +21,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
+    @NotBlank
     @Column(name = "last_name", nullable = false)
     private String lastName;
 

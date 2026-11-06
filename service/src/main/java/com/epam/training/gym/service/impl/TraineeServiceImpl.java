@@ -5,10 +5,12 @@ import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
+import com.epam.training.gym.service.validation.EntityValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
@@ -20,6 +22,7 @@ public class TraineeServiceImpl implements TraineeService {
 
     private TraineeDao traineeDao;
     private NewUserDataGenerator newUserDataGenerator;
+    private EntityValidator entityValidator;
 
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
@@ -31,23 +34,24 @@ public class TraineeServiceImpl implements TraineeService {
         this.newUserDataGenerator = newUserDataGenerator;
     }
 
+    @Autowired
+    public void setEntityValidator(EntityValidator entityValidator) {
+        this.entityValidator = entityValidator;
+    }
+
     @Override
+    @Transactional
     public Trainee create(Trainee trainee) {
-        Trainee saved;
-        // Generating the username and saving must be one step: otherwise two profiles created at the same time
-        // (a trainee and a trainer too) could get the same username. The generator is a single bean shared
-        // by both services, so it is used as their common lock.
-        synchronized (newUserDataGenerator) {
-            newUserDataGenerator.fillNewUserData(trainee);
-            saved = traineeDao.save(trainee);
-        }
-        log.info("Trainee created: id={}, username={}", saved.getId(), saved.getUsername());
+        entityValidator.validate(trainee);
+        newUserDataGenerator.fillNewUserData(trainee.getUser());
+        Trainee saved = traineeDao.save(trainee);
+        log.info("Trainee created: id={}, username={}", saved.getId(), saved.getUser().getUsername());
 
         return saved;
     }
 
     /** Keeps userId, username and password of the stored trainee: they are generated, not editable. */
-    @Override
+    /*@Override
     public Trainee update(Trainee trainee) {
         Objects.requireNonNull(trainee.getId(), "Trainee id is required for update");
         Trainee existing = findById(trainee.getId());
@@ -86,4 +90,5 @@ public class TraineeServiceImpl implements TraineeService {
 
         return traineeDao.findAll();
     }
+     */
 }

@@ -31,6 +31,12 @@
             <artifactId>hibernate-core</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Validation annotations on entities: @NotBlank, @NotNull... -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

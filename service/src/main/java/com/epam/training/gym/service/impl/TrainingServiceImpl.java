@@ -31,6 +31,7 @@ public class TrainingServiceImpl implements TrainingService {
         return saved;
     }
 
+    /*
     @Override
     public Training findById(Long id) {
         log.debug("Looking for training id={}", id);
@@ -45,4 +46,6 @@ public class TrainingServiceImpl implements TrainingService {
 
         return trainingDao.findAll();
     }
+
+     */
 }
