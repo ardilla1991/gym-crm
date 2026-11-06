@@ -1,93 +1,71 @@
 # Gym CRM
 
-A Spring-based module of a gym CRM system: trainees, trainers and trainings stored in an in-memory storage.
-Plain Spring Framework (no Spring Boot), Java-based configuration.
+Gym CRM module on plain Spring Framework (no Spring Boot) with JPA and Hibernate.
 
-## Requirements
+Requirements: JDK 21, Maven 3.9+. Optional: Docker or a local PostgreSQL.
 
-- JDK 21
-- Maven 3.9+ (or the Maven Wrapper from the repository: `mvnw` / `mvnw.cmd`)
+## Run
 
-## Modules
+The demo in `Main` calls every operation through `GymFacade` and logs each step with the generated SQL.
 
-| Module        | Contents                                                                                   |
-|---------------|--------------------------------------------------------------------------------------------|
-| `domain`      | Entities: `User`, `Trainee`, `Trainer`, `Training`, `TrainingType`                          |
-| `persistence` | DAOs, storage bean names, `StorageInitializer` (loads initial data from files at startup)  |
-| `service`     | `TraineeService`, `TrainerService`, `TrainingService`, username and password generation    |
-| `config`      | Spring configuration (`AppConfig`, `StorageConfig`), `application.properties`, data files  |
-| `api`         | `GymFacade` (single entry point) and `Main` (runs a demo scenario)                          |
+**H2 (default, nothing to install):**
 
-Dependencies go in one direction: `domain ← persistence ← service ← config ← api`.
+```bash
+mvn clean install
+mvn -pl api exec:java
+```
 
-## Build
+**PostgreSQL in Docker:**
 
-From the project root:
+```bash
+docker compose up -d
+mvn -pl api exec:java -Ddb=postgres
+```
+
+**Local PostgreSQL:** create the database `gym_crm`, then
+
+```bash
+mvn -pl api exec:java -Ddb=postgres -Ddb.username=<user> -Ddb.password=<password>
+```
+
+Tables are created by Hibernate on every start; initial data comes from `config/src/main/resources/db/data.sql`.
+
+## Tests and coverage
 
 ```bash
 mvn clean install
 ```
 
-This compiles all modules, runs all unit tests and builds the coverage report.
+Coverage report for the whole project: `api/target/site/jacoco-aggregate/index.html` (row **Total**, column **Lines**).
 
-## Run
+## Who can do what
 
-**From IntelliJ IDEA:** open `api/src/main/java/.../Main.java` and run `main()`.
+Every operation except creating a profile takes the `Credentials` (username and password) of the user who performs it.
 
-**From the command line** (after `mvn clean install`):
+| Operation                                           | Who must sign in | Whose data         |
+|-----------------------------------------------------|------------------|--------------------|
+| Create trainee / trainer profile                    | nobody           | new profile        |
+| Check username and password                         | —                | own                |
+| Read trainee / trainer profile by username          | any user         | any profile        |
+| Change password, update profile, activate/deactivate | the user         | own                |
+| Delete trainee profile                              | the trainee      | own                |
+| Get trainings by criteria                           | the trainee / trainer | own           |
+| Add training                                        | the trainee      | own, with any trainer |
+| Get not assigned trainers, update trainers list     | the trainee      | own                |
 
-```bash
-mvn -pl api exec:java
-```
+## Decisions
 
-`Main` starts the Spring context, prints the data loaded from the files, then creates a trainee and a trainer,
-updates the trainee, creates a training and deletes the trainee, logging every step.
+- A user can change only their own data; reading a profile by username is allowed to any signed-in user.
+- Username: `FirstName.LastName`, plus the first free number if taken (`John.Smith1`). Password: 10 random characters.
+- Activate/deactivate is a toggle, so it is not idempotent.
+- Trainer specialization is read-only; the username does not change when the name is updated.
+- Training criteria: dates are inclusive, names are compared with the first name, case-insensitive.
+- Adding a training also adds the trainer to the trainee's trainers list.
+- Deleting a trainee deletes the trainee's trainings through the JPA cascade (`CascadeType.REMOVE`).
+  Hibernate deletes them one by one; for many trainings `ON DELETE CASCADE` in the database would be faster.
+- Trainings and profiles are loaded with `JOIN FETCH` in one query to avoid the N+1 problem.
 
-## Configuration
+## Why Training Type is a separate table
 
-Initial data is loaded on startup from JSON files; their paths are set in
-`config/src/main/resources/application.properties`:
-
-```properties
-storage.init.trainee=classpath:data/trainees.json
-storage.init.trainer=classpath:data/trainers.json
-storage.init.training=classpath:data/trainings.json
-storage.init.training-type=classpath:data/training-types.json
-```
-
-To use a file outside the project, use the `file:` prefix, e.g. `file:C:/gym/data/trainees.json`.
-
-Logging is configured in `api/src/main/resources/simplelogger.properties`
-(default level `INFO`; uncomment the line there to see `DEBUG` messages of the application).
-
-## Username and password rules
-
-- **Username:** `FirstName.LastName`, e.g. `John.Smith`.
-  If a trainee or trainer with this username already exists, the first free serial number is added:
-  `John.Smith1`, `John.Smith2`, ...
-- **Password:** random string of 10 characters.
-
-## Tests and coverage
-
-Run all tests:
-
-```bash
-mvn clean test
-```
-
-Coverage is measured by JaCoCo. After the tests, open the report for the whole project in a browser:
-
-```
-api/target/site/jacoco-aggregate/index.html
-```
-
-The **Total** row shows the coverage of all modules; the **Lines** column is the line coverage.
-Click a module, package or class to see the source code: covered lines are green, uncovered are red.
-
-Reports for single modules (only modules that have their own tests):
-
-```
-persistence/target/site/jacoco/index.html
-service/target/site/jacoco/index.html
-api/target/site/jacoco/index.html
-```
+Trainings and trainers refer to a type by id: only existing types can be used (no `Yoga` / `YOGA` duplicates),
+trainers and trainings share one list of types, and a type is changed in one place.
