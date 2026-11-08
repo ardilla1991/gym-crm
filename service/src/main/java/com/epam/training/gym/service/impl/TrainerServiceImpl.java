@@ -5,6 +5,7 @@ import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
+import com.epam.training.gym.service.validation.UserValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ public class TrainerServiceImpl implements TrainerService {
 
     private TrainerDao trainerDao;
     private NewUserDataGenerator newUserDataGenerator;
+    private UserValidator userValidator;
 
     @Autowired
     public void setTrainerDao(TrainerDao trainerDao) {
@@ -31,8 +33,14 @@ public class TrainerServiceImpl implements TrainerService {
         this.newUserDataGenerator = newUserDataGenerator;
     }
 
+    @Autowired
+    public void setUserValidator(UserValidator userValidator) {
+        this.userValidator = userValidator;
+    }
+
     @Override
     public Trainer create(Trainer trainer) {
+        userValidator.validate(trainer);
         Trainer saved;
         // Generating the username and saving must be one step: otherwise two profiles created at the same time
         // (a trainee and a trainer too) could get the same username. The generator is a single bean shared
@@ -48,6 +56,7 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     public Trainer update(Trainer trainer) {
+        userValidator.validate(trainer);
         Objects.requireNonNull(trainer.getId(), "Trainer id is required for update");
         Trainer existing = findById(trainer.getId());
         trainer.setUserId(existing.getUserId());

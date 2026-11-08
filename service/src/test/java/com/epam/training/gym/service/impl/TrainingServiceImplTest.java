@@ -1,6 +1,10 @@
 package com.epam.training.gym.service.impl;
 
+import com.epam.training.gym.domain.Trainee;
+import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.persistence.dao.TraineeDao;
+import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,13 +17,18 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class TrainingServiceImplTest {
     @Mock
     private TrainingDao trainingDao;
+
+    @Mock
+    private TraineeDao traineeDao;
+
+    @Mock
+    private TrainerDao trainerDao;
 
     private TrainingServiceImpl trainingService;
 
@@ -27,15 +36,39 @@ public class TrainingServiceImplTest {
     void setUp() {
         trainingService = new TrainingServiceImpl();
         trainingService.setTrainingDao(trainingDao);
+        trainingService.setTraineeDao(traineeDao);
+        trainingService.setTrainerDao(trainerDao);
     }
 
     @Test
-    void create_savesTraining() {
-        Training yoga = Training.builder().trainingName("Morning yoga").build();
-        when(trainingDao.save(yoga)).thenReturn(yoga);
+    void create_existingTraineeAndTrainer_savesTraining() {
+        Training training = Training.builder().traineeId(1L).trainerId(2L).build();
+        when(traineeDao.findById(1L)).thenReturn(Optional.of(new Trainee()));
+        when(trainerDao.findById(2L)).thenReturn(Optional.of(new Trainer()));
+        when(trainingDao.save(training)).thenReturn(training);
 
-        assertSame(yoga, trainingService.create(yoga));
-        verify(trainingDao).save(yoga);
+        assertSame(training, trainingService.create(training));
+    }
+
+    @Test
+    void create_unknownTrainee_savesNothing() {
+        Training training = Training.builder().traineeId(99L).trainerId(2L).build();
+        when(traineeDao.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
+
+        verify(trainingDao, never()).save(any());
+    }
+
+    @Test
+    void create_unknownTrainer_savesNothing() {
+        Training training = Training.builder().traineeId(1L).trainerId(99L).build();
+        when(traineeDao.findById(1L)).thenReturn(Optional.of(new Trainee()));
+        when(trainerDao.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
+
+        verify(trainingDao, never()).save(any());
     }
 
     @Test

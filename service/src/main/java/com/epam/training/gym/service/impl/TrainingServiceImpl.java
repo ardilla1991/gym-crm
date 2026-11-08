@@ -1,6 +1,8 @@
 package com.epam.training.gym.service.impl;
 
 import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.persistence.dao.TraineeDao;
+import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.service.TrainingService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
@@ -17,14 +19,32 @@ public class TrainingServiceImpl implements TrainingService {
     private static final Logger log = LoggerFactory.getLogger(TrainingServiceImpl.class);
 
     private TrainingDao trainingDao;
+    private TraineeDao traineeDao;
+    private TrainerDao trainerDao;
 
     @Autowired
     public void setTrainingDao(TrainingDao trainingDao) {
         this.trainingDao = trainingDao;
     }
 
+    @Autowired
+    public void setTraineeDao(TraineeDao traineeDao) {
+        this.traineeDao = traineeDao;
+    }
+
+    @Autowired
+    public void setTrainerDao(TrainerDao trainerDao) {
+        this.trainerDao = trainerDao;
+    }
+
     @Override
     public Training create(Training training) {
+        if (traineeDao.findById(training.getTraineeId()).isEmpty()) {
+            throw new EntityNotFoundException("Trainee", training.getTraineeId());
+        }
+        if (trainerDao.findById(training.getTrainerId()).isEmpty()) {
+            throw new EntityNotFoundException("Trainer", training.getTrainerId());
+        }
         Training saved = trainingDao.save(training);
         log.info("Training created: id={}, name={}", saved.getId(), saved.getTrainingName());
 

@@ -4,6 +4,7 @@ import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
+import com.epam.training.gym.service.validation.UserValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,9 @@ public class TraineeServiceImplTest {
     @Mock
     private NewUserDataGenerator newUserDataGenerator;
 
+    @Mock
+    private UserValidator userValidator;
+
     private TraineeServiceImpl traineeService;
 
     @BeforeEach
@@ -31,6 +35,7 @@ public class TraineeServiceImplTest {
         traineeService = new TraineeServiceImpl();
         traineeService.setTraineeDao(traineeDao);
         traineeService.setNewUserDataGenerator(newUserDataGenerator);
+        traineeService.setUserValidator(userValidator);
     }
 
     @Test
@@ -43,6 +48,17 @@ public class TraineeServiceImplTest {
         assertSame(emily, created);
         verify(newUserDataGenerator).fillNewUserData(emily);
         verify(traineeDao).save(emily);
+    }
+
+    @Test
+    void create_invalidNames_savesNothing() {
+        Trainee trainee = Trainee.builder().firstName(" ").lastName("Smith").build();
+        doThrow(new IllegalArgumentException("First name is required")).when(userValidator).validate(trainee);
+
+        assertThrows(IllegalArgumentException.class, () -> traineeService.create(trainee));
+
+        verify(newUserDataGenerator, never()).fillNewUserData(any());
+        verify(traineeDao, never()).save(any());
     }
 
     @Test
@@ -79,6 +95,16 @@ public class TraineeServiceImplTest {
     }
 
     @Test
+    void update_invalidNames_updatesNothing() {
+        Trainee trainee = Trainee.builder().id(1L).firstName("John").lastName(" ").build();
+        doThrow(new IllegalArgumentException("Last name is required")).when(userValidator).validate(trainee);
+
+        assertThrows(IllegalArgumentException.class, () -> traineeService.update(trainee));
+
+        verify(traineeDao, never()).update(any());
+    }
+
+    @Test
     void delete_existingTrainee_deletesIt() {
         when(traineeDao.findById(1L)).thenReturn(Optional.of(Trainee.builder().id(1L).build()));
 
@@ -88,10 +114,10 @@ public class TraineeServiceImplTest {
     }
 
     @Test
-    void delete_unknownTrainee_doesNothing() {
+    void delete_unknownId_throwsNotFound() {
         when(traineeDao.findById(99L)).thenReturn(Optional.empty());
 
-        traineeService.delete(99L);
+        assertThrows(EntityNotFoundException.class, () -> traineeService.delete(99L));
 
         verify(traineeDao, never()).delete(anyLong());
     }

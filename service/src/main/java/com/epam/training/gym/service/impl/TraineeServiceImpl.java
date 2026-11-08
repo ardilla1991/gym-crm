@@ -5,6 +5,7 @@ import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
+import com.epam.training.gym.service.validation.UserValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,8 @@ public class TraineeServiceImpl implements TraineeService {
     private TraineeDao traineeDao;
     private NewUserDataGenerator newUserDataGenerator;
 
+    private UserValidator userValidator;
+
     @Autowired
     public void setTraineeDao(TraineeDao traineeDao) {
         this.traineeDao = traineeDao;
@@ -31,8 +34,14 @@ public class TraineeServiceImpl implements TraineeService {
         this.newUserDataGenerator = newUserDataGenerator;
     }
 
+    @Autowired
+    public void setUserValidator(UserValidator userValidator) {
+        this.userValidator = userValidator;
+    }
+
     @Override
     public Trainee create(Trainee trainee) {
+        userValidator.validate(trainee);
         Trainee saved;
         // Generating the username and saving must be one step: otherwise two profiles created at the same time
         // (a trainee and a trainer too) could get the same username. The generator is a single bean shared
@@ -49,6 +58,7 @@ public class TraineeServiceImpl implements TraineeService {
     /** Keeps userId, username and password of the stored trainee: they are generated, not editable. */
     @Override
     public Trainee update(Trainee trainee) {
+        userValidator.validate(trainee);
         Objects.requireNonNull(trainee.getId(), "Trainee id is required for update");
         Trainee existing = findById(trainee.getId());
         trainee.setUserId(existing.getUserId());
@@ -63,11 +73,7 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     public void delete(Long id) {
-        if (traineeDao.findById(id).isEmpty()) {
-            log.warn("Trainee with id={} not found, nothing to delete", id);
-            return;
-        }
-
+        findById(id);
         traineeDao.delete(id);
         log.info("Trainee deleted: id={}", id);
     }

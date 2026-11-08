@@ -7,6 +7,7 @@ import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.core.io.ClassPathResource;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -91,5 +92,23 @@ public class StorageInitializerTest {
 
         assertThrows(BeanInitializationException.class,
                 () -> initializer.postProcessAfterInitialization(storage, TRAINEE_STORAGE));
+    }
+
+    @Test
+    void duplicateIdInFile_failsStartup() {
+        initializer.setTraineeFile(new ClassPathResource("test-data/trainees-duplicate-id.json"));
+
+        BeanInitializationException exception = assertThrows(BeanInitializationException.class,
+                () -> initializer.postProcessAfterInitialization(new HashMap<Long, Trainee>(), TRAINEE_STORAGE));
+
+        assertTrue(exception.getMessage().contains("Duplicate id 1"));
+    }
+
+    @Test
+    void recordWithoutIdInFile_failsStartup() {
+        initializer.setTraineeFile(new ClassPathResource("test-data/trainees-without-id.json"));
+
+        assertThrows(BeanInitializationException.class,
+                () -> initializer.postProcessAfterInitialization(new HashMap<Long, Trainee>(), TRAINEE_STORAGE));
     }
 }

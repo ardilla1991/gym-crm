@@ -95,7 +95,12 @@ public class StorageInitializer implements BeanPostProcessor {
             List<T> records = objectMapper.readValue(in, type);
             for (T entity  : records) {
                 Long id = idExtractor.apply(entity );
-                storage.put(id, entity );
+                if (id == null) {
+                    throw new BeanInitializationException("Record without id in " + resource.getFilename());
+                }
+                if (storage.putIfAbsent(id, entity) != null) {
+                    throw new BeanInitializationException("Duplicate id " + id + " in " + resource.getFilename());
+                }
             }
             log.info("Loaded {} records from {}", records.size(), resource.getFilename());
         } catch (IOException e) {

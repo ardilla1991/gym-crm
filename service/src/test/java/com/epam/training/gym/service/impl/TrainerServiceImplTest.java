@@ -6,6 +6,7 @@ import com.epam.training.gym.domain.TrainingTypeName;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
+import com.epam.training.gym.service.validation.UserValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,9 @@ public class TrainerServiceImplTest {
     @Mock
     private NewUserDataGenerator newUserDataGenerator;
 
+    @Mock
+    private UserValidator userValidator;
+
     private TrainerServiceImpl trainerService;
 
     @BeforeEach
@@ -33,6 +37,7 @@ public class TrainerServiceImplTest {
         trainerService = new TrainerServiceImpl();
         trainerService.setTrainerDao(trainerDao);
         trainerService.setNewUserDataGenerator(newUserDataGenerator);
+        trainerService.setUserValidator(userValidator);
     }
 
     @Test
@@ -49,6 +54,17 @@ public class TrainerServiceImplTest {
         assertSame(chris, created);
         verify(newUserDataGenerator).fillNewUserData(chris);
         verify(trainerDao).save(chris);
+    }
+
+    @Test
+    void create_invalidNames_savesNothing() {
+        Trainer trainer = Trainer.builder().firstName(" ").lastName("Smith").build();
+        doThrow(new IllegalArgumentException("First name is required")).when(userValidator).validate(trainer);
+
+        assertThrows(IllegalArgumentException.class, () -> trainerService.create(trainer));
+
+        verify(newUserDataGenerator, never()).fillNewUserData(any());
+        verify(trainerDao, never()).save(any());
     }
 
     @Test
@@ -82,6 +98,16 @@ public class TrainerServiceImplTest {
         Trainer withoutId = Trainer.builder().firstName("Chris").build();
 
         assertThrows(NullPointerException.class, () -> trainerService.update(withoutId));
+    }
+
+    @Test
+    void update_invalidNames_updatesNothing() {
+        Trainer trainee = Trainer.builder().id(1L).firstName("John").lastName(" ").build();
+        doThrow(new IllegalArgumentException("Last name is required")).when(userValidator).validate(trainee);
+
+        assertThrows(IllegalArgumentException.class, () -> trainerService.update(trainee));
+
+        verify(trainerDao, never()).update(any());
     }
 
     @Test
