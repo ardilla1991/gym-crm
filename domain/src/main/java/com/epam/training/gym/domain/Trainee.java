@@ -52,7 +52,8 @@ public class Trainee implements UserProfile {
     @ManyToMany
     @JoinTable(name = "trainee_trainer",
             joinColumns = @JoinColumn(name = "trainee_id"),
-            inverseJoinColumns = @JoinColumn(name = "trainer_id"))
+            inverseJoinColumns = @JoinColumn(name = "trainer_id"),
+            indexes = @Index(name = "idx_trainee_trainer_trainer", columnList = "trainer_id"))
     private Set<Trainer> trainers = new HashSet<>();
 
     /** Deleting a trainee also deletes the trainee's trainings. */

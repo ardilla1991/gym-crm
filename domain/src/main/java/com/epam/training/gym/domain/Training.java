@@ -12,7 +12,10 @@ import java.time.LocalDate;
  * A training session (table "training"): one trainee, one trainer, one training type.
  */
 @Entity
-@Table(name = "training")
+@Table(name = "training", indexes = {
+        @Index(name = "idx_training_trainee_date", columnList = "trainee_id, training_date"),
+        @Index(name = "idx_training_trainer_date", columnList = "trainer_id, training_date")
+})
 @Getter
 @Setter
 @NoArgsConstructor
