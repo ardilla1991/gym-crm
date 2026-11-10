@@ -11,9 +11,15 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
  * Root of the Spring application context.
  * Scans all modules for beans (@Component, @Repository, @Service, @Configuration)
  * and registers the external property file.
+ * Scans only core modules, not the web module (which is scanned by WebConfig).
  */
 @Configuration
-@ComponentScan("com.epam.training.gym")
+@ComponentScan({
+        "com.epam.training.gym.persistence",
+        "com.epam.training.gym.service",
+        "com.epam.training.gym.config",
+        "com.epam.training.gym.api.facade"
+})
 public class AppConfig {
 
     /**
