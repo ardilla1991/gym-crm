@@ -1,15 +1,13 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.TrainingTypeName;
+import com.epam.training.gym.domain.*;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainingService;
+import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.validation.EntityValidator;
 import org.slf4j.Logger;
@@ -30,6 +28,8 @@ public class TrainingServiceImpl implements TrainingService {
     private TrainingDao trainingDao;
     private TrainingTypeDao trainingTypeDao;
     private EntityValidator entityValidator;
+
+    private UserAuthenticator userAuthenticator;
 
     @Autowired
     public void setTraineeService(TraineeService traineeService) {
@@ -56,6 +56,11 @@ public class TrainingServiceImpl implements TrainingService {
         this.entityValidator = entityValidator;
     }
 
+    @Autowired
+    public void setUserAuthenticator(UserAuthenticator userAuthenticator) {
+        this.userAuthenticator = userAuthenticator;
+    }
+
     @Override
     public Training create(Training training) {
         Training saved = trainingDao.save(training);
@@ -73,11 +78,8 @@ public class TrainingServiceImpl implements TrainingService {
 
         training.setTrainee(trainee);
         training.setTrainer(trainer);
-        if (training.getTrainingType() != null) {
-            TrainingTypeName typeName = training.getTrainingType().getTrainingTypeName();
-            training.setTrainingType(trainingTypeDao.findByName(typeName)
-                    .orElseThrow(() -> new EntityNotFoundException("Training type", typeName)));
-        }
+        // The request has no training type: a training has the type of the trainer's specialization
+        training.setTrainingType(trainer.getSpecialization());
         entityValidator.validate(training);
 
         // A trainee who trains with a trainer has this trainer in the list
@@ -89,4 +91,13 @@ public class TrainingServiceImpl implements TrainingService {
 
         return saved;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrainingType> getTrainingTypes(Credentials credentials) {
+        userAuthenticator.authenticate(credentials);
+
+        return trainingTypeDao.findAll();
+    }
+
 }

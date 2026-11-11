@@ -1,5 +1,6 @@
 package com.epam.training.gym.service.auth;
 
+import com.epam.training.gym.domain.User;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.service.exception.AuthenticationException;
@@ -24,14 +25,16 @@ public class UserAuthenticator {
         this.userDao = userDao;
     }
 
-    /** @throws AuthenticationException if the username or the password is wrong */
-    public void authenticate(Credentials credentials) {
-        boolean valid = userDao.findByUsername(credentials.username())
+    /**
+     * @return the signed-in user, trainee or trainer
+     * @throws AuthenticationException if the username or the password is wrong
+     */
+    public User authenticate(Credentials credentials) {
+        return userDao.findByUsername(credentials.username())
                 .filter(user -> user.getPassword().equals(credentials.password()))
-                .isPresent();
-        if (!valid) {
-            log.warn("User authentication failed: username={}", credentials.username());
-            throw new AuthenticationException();
-        }
+                .orElseThrow(() -> {
+                    log.warn("User authentication failed: username={}", credentials.username());
+                    return new AuthenticationException();
+                });
     }
 }

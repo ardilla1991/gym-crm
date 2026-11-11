@@ -1,14 +1,13 @@
 package com.epam.training.gym.api.facade;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.domain.*;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;
+import com.epam.training.gym.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,11 +39,14 @@ public class GymFacadeTest {
     @Mock
     private TrainingService trainingService;
 
+    @Mock
+    private UserService userService;
+
     private GymFacade facade;
 
     @BeforeEach
     void setUp() {
-        facade = new GymFacade(traineeService, trainerService, trainingService);
+        facade = new GymFacade(traineeService, trainerService, trainingService, userService);
     }
 
     // ---------- Trainee ----------
@@ -199,5 +201,20 @@ public class GymFacadeTest {
         when(traineeService.updateTrainers(CREDENTIALS, usernames)).thenReturn(trainers);
 
         assertSame(trainers, facade.updateTraineeTrainers(CREDENTIALS, usernames));
+    }
+
+    @Test
+    void changePassword_delegatesToUserService() {
+        facade.changePassword(CREDENTIALS, NEW_PASSWORD);
+
+        verify(userService).changePassword(CREDENTIALS, NEW_PASSWORD);
+    }
+
+    @Test
+    void getTrainingTypes_returnsServiceResult() {
+        List<TrainingType> types = List.of(new TrainingType(2L, TrainingTypeName.YOGA));
+        when(trainingService.getTrainingTypes(CREDENTIALS)).thenReturn(types);
+
+        assertSame(types, facade.getTrainingTypes(CREDENTIALS));
     }
 }

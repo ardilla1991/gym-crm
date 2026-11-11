@@ -12,8 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,10 +27,11 @@ public class UserAuthenticatorTest {
     private UserAuthenticator userAuthenticator;
 
     @Test
-    void authenticate_rightPassword_passes() {
-        when(userDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingUser()));
+    void authenticate_rightPassword_returnsUser() {
+        User user = existingUser();
+        when(userDao.findByUsername(USERNAME)).thenReturn(Optional.of(user));
 
-        assertDoesNotThrow(() -> userAuthenticator.authenticate(new Credentials(USERNAME, CURRENT_PASSWORD)));
+        assertSame(user, userAuthenticator.authenticate(new Credentials(USERNAME, CURRENT_PASSWORD)));
     }
 
     @Test

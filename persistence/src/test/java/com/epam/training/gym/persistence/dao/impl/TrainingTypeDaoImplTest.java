@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -33,5 +35,15 @@ public class TrainingTypeDaoImplTest {
     @EnumSource(TrainingTypeName.class)
     void findByName_everyEnumValue_isPresent(TrainingTypeName name) {
         assertTrue(trainingTypeDao.findByName(name).isPresent());
+    }
+
+    @Test
+    void findAll_returnsAllTypesOrderedByName() {
+        List<TrainingType> types = trainingTypeDao.findAll();
+
+        assertEquals(
+                List.of(TrainingTypeName.FITNESS, TrainingTypeName.RESISTANCE, TrainingTypeName.STRETCHING,
+                        TrainingTypeName.YOGA, TrainingTypeName.ZUMBA),
+                types.stream().map(TrainingType::getTrainingTypeName).toList());
     }
 }

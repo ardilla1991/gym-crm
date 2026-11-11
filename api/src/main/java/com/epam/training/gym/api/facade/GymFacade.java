@@ -3,12 +3,14 @@ package com.epam.training.gym.api.facade;
 import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.domain.TrainingType;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;
+import com.epam.training.gym.service.UserService;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -22,13 +24,16 @@ public class GymFacade {
     private final TraineeService traineeService;
     private final TrainerService trainerService;
     private final TrainingService trainingService;
+    private final UserService userService;
 
     public GymFacade(TraineeService traineeService,
                      TrainerService trainerService,
-                     TrainingService trainingService) {
+                     TrainingService trainingService,
+                     UserService userService) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.trainingService = trainingService;
+        this.userService = userService;
     }
 
     public Trainee createTrainee(Trainee trainee) {
@@ -101,6 +106,16 @@ public class GymFacade {
 
     public List<Trainer> updateTraineeTrainers(Credentials credentials, List<String> trainerUsernames) {
         return traineeService.updateTrainers(credentials, trainerUsernames);
+    }
+
+    /** Change Login: for a trainee or a trainer. */
+    public void changePassword(Credentials credentials, String newPassword) {
+        userService.changePassword(credentials, newPassword);
+    }
+
+    /** Get Training types. */
+    public List<TrainingType> getTrainingTypes(Credentials credentials) {
+        return trainingService.getTrainingTypes(credentials);
     }
 
 }

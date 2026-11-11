@@ -5,6 +5,7 @@ import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
 import com.epam.training.gym.service.TraineeService;
+import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.persistence.dao.TrainingDao;
@@ -47,6 +48,9 @@ public class TrainingServiceImplTest {
     @Mock
     private EntityValidator entityValidator;
 
+    @Mock
+    private UserAuthenticator userAuthenticator;
+
     @InjectMocks
     private TrainingServiceImpl trainingService;
 
@@ -56,15 +60,14 @@ public class TrainingServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Only objects here, no when(...): with strict stubs every stub must be used by every test
-        trainee = Trainee.builder().user(User.builder().username("John.Smith").build()).build();
-        trainer = Trainer.builder().user(User.builder().username(TRAINER_USERNAME).build()).build();
         yogaFromDb = new TrainingType(2L, TrainingTypeName.YOGA);
+        trainee = Trainee.builder().user(User.builder().username("John.Smith").build()).build();
+        trainer = Trainer.builder().specialization(yogaFromDb).user(User.builder().username(TRAINER_USERNAME).build()).build();
     }
 
     @Test
-    void addTraining_linksTraineeTrainerAndTypeFromDatabase() {
-        stubTraineeTrainerAndType();
+    void addTraining_usesTrainersSpecializationAsType() {
+        stubTraineeAndTrainer();
         Training training = newTraining();
         when(trainingDao.save(training)).thenReturn(training);
 
@@ -78,7 +81,7 @@ public class TrainingServiceImplTest {
 
     @Test
     void addTraining_trainerNotInList_isAddedToTraineesTrainers() {
-        stubTraineeTrainerAndType();
+        stubTraineeAndTrainer();
         Training training = newTraining();
         when(trainingDao.save(training)).thenReturn(training);
 
@@ -110,20 +113,8 @@ public class TrainingServiceImplTest {
     }
 
     @Test
-    void addTraining_unknownTrainingType_savesNothing() {
-        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(trainee);
-        when(trainerDao.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
-        when(trainingTypeDao.findByName(TrainingTypeName.YOGA)).thenReturn(Optional.empty());
-
-        assertThrows(EntityNotFoundException.class,
-                () -> trainingService.addTraining(TRAINEE_CREDENTIALS, TRAINER_USERNAME, newTraining()));
-
-        verify(trainingDao, never()).save(any());
-    }
-
-    @Test
     void addTraining_invalidTraining_savesNothingAndKeepsTrainersList() {
-        stubTraineeTrainerAndType();
+        stubTraineeAndTrainer();
         Training training = newTraining();
         doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(training);
 
@@ -134,17 +125,33 @@ public class TrainingServiceImplTest {
         assertTrue(trainee.getTrainers().isEmpty());
     }
 
-    private void stubTraineeTrainerAndType() {
-        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(trainee);
-        when(trainerDao.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
-        when(trainingTypeDao.findByName(TrainingTypeName.YOGA)).thenReturn(Optional.of(yogaFromDb));
+    @Test
+    void getTrainingTypes_returnsAllTypes() {
+        List<TrainingType> types = List.of(yogaFromDb);
+        when(trainingTypeDao.findAll()).thenReturn(types);
+
+        assertSame(types, trainingService.getTrainingTypes(TRAINEE_CREDENTIALS));
+        verify(userAuthenticator).authenticate(TRAINEE_CREDENTIALS);
     }
 
-    /** A training as a caller passes it: the type is built by hand, without id. */
+    @Test
+    void getTrainingTypes_wrongCredentials_returnsNothing() {
+        when(userAuthenticator.authenticate(TRAINEE_CREDENTIALS)).thenThrow(new AuthenticationException());
+
+        assertThrows(AuthenticationException.class, () -> trainingService.getTrainingTypes(TRAINEE_CREDENTIALS));
+
+        verify(trainingTypeDao, never()).findAll();
+    }
+
+    private void stubTraineeAndTrainer() {
+        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(trainee);
+        when(trainerDao.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
+    }
+
+    /** A training as the caller passes it: without type, trainee and trainer. */
     private static Training newTraining() {
         return Training.builder()
                 .trainingName("Morning yoga")
-                .trainingType(new TrainingType(null, TrainingTypeName.YOGA))
                 .trainingDate(LocalDate.of(2026, 5, 1))
                 .trainingDuration(60)
                 .build();
