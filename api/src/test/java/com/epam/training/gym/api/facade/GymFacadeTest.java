@@ -72,10 +72,10 @@ public class GymFacadeTest {
     }
 
     @Test
-    void toggleTraineeActive_returnsServiceResult() {
-        when(traineeService.toggleActive(CREDENTIALS)).thenReturn(false);
+    void changeTraineeActiveStatus_delegatesToService() {
+        facade.changeTraineeActiveStatus(CREDENTIALS, false);
 
-        assertFalse(facade.toggleTraineeActive(CREDENTIALS));
+        verify(traineeService).changeActiveStatus(CREDENTIALS, false);
     }
 
     // ---------- Trainer ----------
@@ -103,10 +103,10 @@ public class GymFacadeTest {
     }
 
     @Test
-    void toggleTrainerActive_returnsServiceResult() {
-        when(trainerService.toggleActive(CREDENTIALS)).thenReturn(true);
+    void changeTrainerActiveStatus_delegatesToService() {
+        facade.changeTrainerActiveStatus(CREDENTIALS, true);
 
-        assertTrue(facade.toggleTrainerActive(CREDENTIALS));
+        verify(trainerService).changeActiveStatus(CREDENTIALS, true);
     }
 
     // ---------- profiles ----------

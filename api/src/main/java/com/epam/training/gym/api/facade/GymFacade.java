@@ -51,12 +51,12 @@ public class GymFacade {
         trainerService.changePassword(credentials, newPassword);
     }
 
-    public boolean toggleTraineeActive(Credentials credentials) {
-        return traineeService.toggleActive(credentials);
+    public void changeTraineeActiveStatus(Credentials credentials, boolean active) {
+        traineeService.changeActiveStatus(credentials, active);
     }
 
-    public boolean toggleTrainerActive(Credentials credentials) {
-        return trainerService.toggleActive(credentials);
+    public void changeTrainerActiveStatus(Credentials credentials, boolean active) {
+        trainerService.changeActiveStatus(credentials, active);
     }
 
     public Trainee getTraineeProfile(Credentials credentials, String username) {

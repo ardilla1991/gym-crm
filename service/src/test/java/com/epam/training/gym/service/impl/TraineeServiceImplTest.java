@@ -12,6 +12,7 @@ import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
 import jakarta.validation.ConstraintViolationException;
@@ -150,32 +151,34 @@ public class TraineeServiceImplTest {
         verify(traineeDao, never()).findByUsername(any());
     }
 
-// ---------- toggleActive ----------
+// ---------- changeActiveStatus ----------
+@Test
+void changeActiveStatus_inactiveTrainee_activates() {
+    Trainee trainee = existingTrainee(false);
+    when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+    traineeService.changeActiveStatus(VALID_CREDENTIALS, true);
+
+    assertTrue(trainee.getUser().isActive());
+}
 
     @Test
-    void toggleActive_activeTrainee_becomesInactive() {
+    void changeActiveStatus_sameStatus_throwsAndKeepsStatus() {
         Trainee trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
-        assertFalse(traineeService.toggleActive(VALID_CREDENTIALS));
-        assertFalse(trainee.getUser().isActive());
+        assertThrows(InvalidStateException.class, () -> traineeService.changeActiveStatus(VALID_CREDENTIALS, true));
+
+        assertTrue(trainee.getUser().isActive());
     }
 
     @Test
-    void toggleActive_calledTwice_returnsToOriginalStatus() {
-        Trainee trainee = existingTrainee(false);
-        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
-
-        assertTrue(traineeService.toggleActive(VALID_CREDENTIALS));      // inactive -> active
-        assertFalse(traineeService.toggleActive(VALID_CREDENTIALS));     // active -> inactive: not idempotent
-    }
-
-    @Test
-    void toggleActive_wrongPassword_throwsAndKeepsStatus() {
+    void changeActiveStatus_wrongPassword_throwsAndKeepsStatus() {
         Trainee trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
-        assertThrows(AuthenticationException.class, () -> traineeService.toggleActive(WRONG_PASSWORD_CREDENTIALS));
+        assertThrows(AuthenticationException.class,
+                () -> traineeService.changeActiveStatus(WRONG_PASSWORD_CREDENTIALS, false));
 
         assertTrue(trainee.getUser().isActive());
     }
@@ -232,6 +235,7 @@ public class TraineeServiceImplTest {
     void update_changesOnlyAllowedFields() {
         Trainee trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+        when(traineeDao.findByUsernameWithTrainers(USERNAME)).thenReturn(Optional.of(trainee));
         Trainee newData = Trainee.builder()
                 .dateOfBirth(LocalDate.of(2000, 5, 5))
                 .address("9 New Road")
@@ -240,7 +244,7 @@ public class TraineeServiceImplTest {
                         .lastName("Smithers")
                         .username("Someone.Else")      // must be ignored
                         .password("hacked")            // must be ignored
-                        .isActive(false)               // must be ignored
+                        .isActive(false)               // the status is updated too
                         .build())
                 .build();
 
@@ -253,7 +257,7 @@ public class TraineeServiceImplTest {
         assertEquals("9 New Road", trainee.getAddress());
         assertEquals(USERNAME, trainee.getUser().getUsername());
         assertEquals(CURRENT_PASSWORD, trainee.getUser().getPassword());
-        assertTrue(trainee.getUser().isActive());
+        assertFalse(trainee.getUser().isActive());
     }
 
     @Test
@@ -263,7 +267,7 @@ public class TraineeServiceImplTest {
 
         assertThrows(ConstraintViolationException.class, () -> traineeService.update(VALID_CREDENTIALS, newData));
 
-        verify(traineeDao, never()).findByUsername(any());
+        verify(traineeDao, never()).findByUsernameWithTrainers(any());
     }
 
 // ---------- delete ----------
@@ -324,9 +328,19 @@ public class TraineeServiceImplTest {
     void getUnassignedTrainers_returnsDaoResult() {
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
         List<Trainer> trainers = List.of(trainerWithUsername("Mark.Hill"));
-        when(trainerDao.findNotAssignedToTrainee(USERNAME)).thenReturn(trainers);
+        when(trainerDao.findActiveNotAssignedToTrainee(USERNAME)).thenReturn(trainers);
 
         assertSame(trainers, traineeService.getUnassignedTrainers(VALID_CREDENTIALS));
+    }
+
+    @Test
+    void getUnassignedTrainers_wrongPassword_doesNotSearch() {
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
+
+        assertThrows(AuthenticationException.class,
+                () -> traineeService.getUnassignedTrainers(WRONG_PASSWORD_CREDENTIALS));
+
+        verify(trainerDao, never()).findActiveNotAssignedToTrainee(any());
     }
 
 // ---------- updateTrainers ----------

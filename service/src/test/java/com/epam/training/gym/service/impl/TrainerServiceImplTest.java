@@ -9,6 +9,7 @@ import com.epam.training.gym.persistence.dao.TrainingTypeDao;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
 import jakarta.validation.ConstraintViolationException;
@@ -137,33 +138,34 @@ public class TrainerServiceImplTest {
         verify(trainerDao, never()).findByUsername(any());
     }
 
-    // ---------- toggleActive ----------
-
+    // ---------- changeActiveStatus ----------
     @Test
-    void toggleActive_activeTrainer_becomesInactive() {
-        Trainer trainer = existingTrainer(true);
-        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
-
-        assertFalse(trainerService.toggleActive(VALID_CREDENTIALS));
-        assertFalse(trainer.getUser().isActive());
-    }
-
-    @Test
-    void toggleActive_calledTwice_returnsToOriginalStatus() {
+    void changeActiveStatus_inactiveTrainee_activates() {
         Trainer trainer = existingTrainer(false);
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
-        assertTrue(trainerService.toggleActive(VALID_CREDENTIALS));     // inactive -> active
-        assertFalse(trainerService.toggleActive(VALID_CREDENTIALS));    // active -> inactive: not idempotent
+        trainerService.changeActiveStatus(VALID_CREDENTIALS, true);
+
+        assertTrue(trainer.getUser().isActive());
     }
 
     @Test
-    void toggleActive_wrongPassword_throwsAndKeepsStatus() {
+    void changeActiveStatus_sameStatus_throwsAndKeepsStatus() {
+        Trainer trainer = existingTrainer(true);
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+
+        assertThrows(InvalidStateException.class, () -> trainerService.changeActiveStatus(VALID_CREDENTIALS, true));
+
+        assertTrue(trainer.getUser().isActive());
+    }
+
+    @Test
+    void changeActiveStatus_wrongPassword_throwsAndKeepsStatus() {
         Trainer trainer = existingTrainer(true);
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
         assertThrows(AuthenticationException.class,
-                () -> trainerService.toggleActive(WRONG_PASSWORD_CREDENTIALS));
+                () -> trainerService.changeActiveStatus(WRONG_PASSWORD_CREDENTIALS, false));
 
         assertTrue(trainer.getUser().isActive());
     }
@@ -214,15 +216,17 @@ public class TrainerServiceImplTest {
         Trainer trainer = existingTrainer(true);
         TrainingType specialization = trainer.getSpecialization();
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+        when(trainerDao.findByUsernameWithTrainees(USERNAME)).thenReturn(Optional.of(trainer));
         Trainer newData = Trainer.builder()
                 .specialization(new TrainingType(1L, TrainingTypeName.FITNESS))   // must be ignored
-                .user(User.builder().firstName("Annie").lastName("Leigh").build())
+                .user(User.builder().firstName("Annie").lastName("Leigh").isActive(false).build())
                 .build();
 
         trainerService.update(VALID_CREDENTIALS, newData);
 
         assertEquals("Annie", trainer.getUser().getFirstName());
         assertEquals("Leigh", trainer.getUser().getLastName());
+        assertFalse(trainer.getUser().isActive());
         assertSame(specialization, trainer.getSpecialization());
         assertEquals(USERNAME, trainer.getUser().getUsername());
     }
@@ -234,7 +238,7 @@ public class TrainerServiceImplTest {
 
         assertThrows(ConstraintViolationException.class, () -> trainerService.update(VALID_CREDENTIALS, newData));
 
-        verify(trainerDao, never()).findByUsername(any());
+        verify(trainerDao, never()).findByUsernameWithTrainees(any());
     }
 
 // ---------- getTrainings ----------

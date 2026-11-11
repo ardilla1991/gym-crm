@@ -18,8 +18,11 @@ public interface TrainerService extends AccountService<Trainer> {
     Trainer create(Trainer trainer);
 
     /**
-     * Updates first name and last name.
+     * Updates first name, last name and active status.
      * The specialization is read-only: past trainings refer to it.
+     * Username and password are not changed here.
+     * @return the updated trainer with the trainees list loaded
+     * @throws com.epam.training.gym.service.exception.AuthenticationException if the credentials are wrong
      * @throws jakarta.validation.ConstraintViolationException if a required field is missing
      */
     Trainer update(Credentials credentials, Trainer newData);

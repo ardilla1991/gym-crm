@@ -34,10 +34,10 @@ public interface AccountService<T extends UserProfile>  {
     void changePassword(Credentials credentials, String newPassword);
 
     /**
-     * Activates an inactive user and deactivates an active one.
-     * Not idempotent: calling it twice returns the user to the original status.
-     * @return the new status: true if the user is active now
+     * Activates or deactivates the user.
+     * Not idempotent: setting the status the user already has is an error.
      * @throws com.epam.training.gym.service.exception.AuthenticationException if the credentials are wrong
+     * @throws com.epam.training.gym.service.exception.InvalidStateException if the user already has this status
      */
-    boolean toggleActive(Credentials credentials);
+    void changeActiveStatus(Credentials credentials, boolean active);
 }

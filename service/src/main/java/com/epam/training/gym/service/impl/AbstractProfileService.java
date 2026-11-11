@@ -6,6 +6,7 @@ import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.service.AccountService;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,11 +74,13 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
 
     @Override
     @Transactional
-    public boolean toggleActive(Credentials credentials) {
+    public void changeActiveStatus(Credentials credentials, boolean active) {
         User user = authenticate(credentials).getUser();
-        user.setActive(!user.isActive());
-        log.info("{} {} is now {}", profileName, user.getUsername(), user.isActive() ? "active" : "inactive");
-        return user.isActive();
+        if (user.isActive() == active) {
+            throw new InvalidStateException(profileName + " is already " + statusName(active));
+        }
+        user.setActive(active);
+        log.info("{} {} is now {}", profileName, user.getUsername(), statusName(active));
     }
 
     /** Loads the profile if the credentials are right; every operation except create starts with it. */
@@ -90,8 +93,19 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
         });
     }
 
+    private static String statusName(boolean active) {
+        return active ? "active" : "inactive";
+    }
+
     private Optional<T> findWithCredentials(Credentials credentials) {
         return findByUsername(credentials.username())
                 .filter(profile -> profile.getUser().getPassword().equals(credentials.password()));
+    }
+
+    /** Like authenticate, but loads the profile with its linked list: for operations that return the profile. */
+    protected T authenticateWithDetails(Credentials credentials) {
+        authenticate(credentials);
+        return findProfileByUsername(credentials.username())
+                .orElseThrow(() -> new EntityNotFoundException(profileName, credentials.username()));
     }
 }

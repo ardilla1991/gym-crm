@@ -87,7 +87,7 @@ public class TrainerDaoImplTest {
     }
 
     @Test
-    void findNotAssignedToTrainee_returnsTrainersMissingFromTraineesList() {
+    void findActiveNotAssignedToTrainee_returnsTrainersMissingFromTraineesList() {
         Trainer anna = trainerDao.save(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
         trainerDao.save(newTrainer("Mark", "Hill", "Mark.Hill", yoga));
         trainerDao.save(newTrainer("Bob", "Ross", "Bob.Ross", yoga));
@@ -96,21 +96,35 @@ public class TrainerDaoImplTest {
         entityManager.persist(john);
         flushAndClear();
 
-        List<Trainer> found = trainerDao.findNotAssignedToTrainee("John.Smith");
+        List<Trainer> found = trainerDao.findActiveNotAssignedToTrainee("John.Smith");
 
         assertEquals(Set.of("Mark.Hill", "Bob.Ross"), usernames(found));
     }
 
     @Test
-    void findNotAssignedToTrainee_traineeWithoutTrainers_returnsAllTrainers() {
+    void findActiveNotAssignedToTrainee_traineeWithoutTrainers_returnsAllActiveTrainers() {
         trainerDao.save(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
         trainerDao.save(newTrainer("Mark", "Hill", "Mark.Hill", yoga));
         entityManager.persist(newTrainee("John.Smith"));
         flushAndClear();
 
-        List<Trainer> found = trainerDao.findNotAssignedToTrainee("John.Smith");
+        List<Trainer> found = trainerDao.findActiveNotAssignedToTrainee("John.Smith");
 
         assertEquals(Set.of("Anna.Lee", "Mark.Hill"), usernames(found));
+    }
+
+    @Test
+    void findActiveNotAssignedToTrainee_skipsInactiveTrainers() {
+        trainerDao.save(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
+        Trainer mark = newTrainer("Mark", "Hill", "Mark.Hill", yoga);
+        mark.getUser().setActive(false);    // Mark is not assigned, but inactive
+        trainerDao.save(mark);
+        entityManager.persist(newTrainee("John.Smith"));
+        flushAndClear();
+
+        List<Trainer> found = trainerDao.findActiveNotAssignedToTrainee("John.Smith");
+
+        assertEquals(Set.of("Anna.Lee"), usernames(found));
     }
 
     @Test

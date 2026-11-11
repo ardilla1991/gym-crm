@@ -3,6 +3,7 @@ package com.epam.training.gym.service.impl;
 import com.epam.training.gym.domain.Trainee;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.Training;
+import com.epam.training.gym.domain.User;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TraineeDao;
@@ -82,11 +83,13 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     @Transactional
     public Trainee update(Credentials credentials, Trainee newData) {
         entityValidator.validate(newData);
-        Trainee trainee = authenticate(credentials);
+        Trainee trainee = authenticateWithDetails(credentials);
 
-        // Only these fields come from the caller; id, username, password and status stay as they are
-        trainee.getUser().setFirstName(newData.getUser().getFirstName());
-        trainee.getUser().setLastName(newData.getUser().getLastName());
+        // Only these fields come from the caller; id, username and password stay as they are
+        User user = trainee.getUser();
+        user.setFirstName(newData.getUser().getFirstName());
+        user.setLastName(newData.getUser().getLastName());
+        user.setActive(newData.getUser().isActive());
         trainee.setDateOfBirth(newData.getDateOfBirth());
         trainee.setAddress(newData.getAddress());
 
@@ -119,7 +122,7 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     public List<Trainer> getUnassignedTrainers(Credentials credentials) {
         authenticate(credentials);
 
-        return trainerDao.findNotAssignedToTrainee(credentials.username());
+        return trainerDao.findActiveNotAssignedToTrainee(credentials.username());
     }
 
     @Override

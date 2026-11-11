@@ -1,9 +1,6 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.TrainingType;
-import com.epam.training.gym.domain.TrainingTypeName;
+import com.epam.training.gym.domain.*;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainerDao;
@@ -91,10 +88,12 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     public Trainer update(Credentials credentials, Trainer newData) {
         // Only the user part is validated: the specialization is not changed, so it may be missing here
         entityValidator.validate(newData.getUser());
-        Trainer trainer = authenticate(credentials);
+        Trainer trainer = authenticateWithDetails(credentials);
 
-        trainer.getUser().setFirstName(newData.getUser().getFirstName());
-        trainer.getUser().setLastName(newData.getUser().getLastName());
+        User user = trainer.getUser();
+        user.setFirstName(newData.getUser().getFirstName());
+        user.setLastName(newData.getUser().getLastName());
+        user.setActive(newData.getUser().isActive());
 
         log.info("Trainer profile updated: username={}", credentials.username());
 
