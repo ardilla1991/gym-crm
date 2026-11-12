@@ -1,6 +1,7 @@
 package com.epam.training.gym.api.rest.controller;
 
 import com.epam.training.gym.api.facade.GymFacade;
+import com.epam.training.gym.api.rest.ApiDocumentation;
 import com.epam.training.gym.api.rest.ApiPaths;
 import com.epam.training.gym.api.rest.auth.AccessChecker;
 import com.epam.training.gym.api.rest.dto.*;
@@ -15,6 +16,10 @@ import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.exception.InvalidStateException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -26,6 +31,7 @@ import java.util.List;
 /** Trainee endpoints: registration, profile, trainers and trainings of a trainee. */
 @RestController
 @RequestMapping(ApiPaths.TRAINEES)
+@Tag(name = "Trainees", description = "Registration, profile, trainers and trainings of a trainee")
 public class TraineeController {
 
     private final GymFacade facade;
@@ -42,6 +48,10 @@ public class TraineeController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Register a trainee (item 1)",
+            description = "No authentication. Returns the generated username and password.")
+    @ApiResponse(responseCode = "201", description = "Trainee registered")
+    @ApiResponse(responseCode = "400", description = "First or last name is missing, or the date of birth is not in the past")
     public RegistrationResponse register(@Valid @RequestBody TraineeRegistrationRequest request) {
         Trainee created = facade.createTrainee(TraineeMapper.toEntity(request));
         return new RegistrationResponse(created.getUser().getUsername(), created.getUser().getPassword());
@@ -57,6 +67,13 @@ public class TraineeController {
      * @throws EntityNotFoundException if there is no trainee with this username
      */
     @GetMapping("/{username}")
+    @Operation(summary = "Get a trainee profile (item 5)",
+            description = "Any signed-in user can read any trainee profile.")
+    @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
+    @ApiResponse(responseCode = "200", description = "The profile with the trainee's trainers")
+    @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
+    @ApiResponse(responseCode = "404", description = "No trainee with this username")
+
     public TraineeProfileResponse getProfile(Credentials credentials,
                                              @PathVariable("username") String username) {
         return TraineeMapper.toProfileResponse(facade.getTraineeProfile(credentials, username));
@@ -74,6 +91,13 @@ public class TraineeController {
      * @throws AuthenticationException if the username or password is wrong
      */
     @PutMapping("/{username}")
+    @Operation(summary = "Update own trainee profile (item 6)",
+            description = "Only the trainee can update their own profile. The username does not change.")
+    @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
+    @ApiResponse(responseCode = "200", description = "The updated profile with the trainee's trainers")
+    @ApiResponse(responseCode = "400", description = "Invalid request: a required field is missing")
+    @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
+    @ApiResponse(responseCode = "403", description = "The username is not the signed-in user")
     public TraineeProfileResponse update(Credentials credentials,
                                          @PathVariable("username") String username,
                                          @Valid @RequestBody UpdateTraineeRequest request) {
@@ -93,6 +117,12 @@ public class TraineeController {
      * @throws AuthenticationException if the username or password is wrong
      */
     @DeleteMapping("/{username}")
+    @Operation(summary = "Delete own trainee profile (item 7)",
+            description = "Only the trainee can delete their own profile. The trainee's trainings are deleted too.")
+    @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
+    @ApiResponse(responseCode = "200", description = "Profile deleted")
+    @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
+    @ApiResponse(responseCode = "403", description = "The username is not the signed-in user")
     public void delete(Credentials credentials, @PathVariable("username") String username) {
         AccessChecker.requireOwner(credentials, username);
         facade.deleteTrainee(credentials);
@@ -109,6 +139,12 @@ public class TraineeController {
      * @throws AuthenticationException if the username or password is wrong
      */
     @GetMapping("/{username}/unassigned-trainers")
+    @Operation(summary = "Active trainers not assigned to the trainee (item 10)",
+            description = "Only the trainee can get their own list.")
+    @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
+    @ApiResponse(responseCode = "200", description = "Active trainers the trainee does not have yet")
+    @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
+    @ApiResponse(responseCode = "403", description = "The username is not the signed-in user")
     public List<TrainerSummary> getUnassignedTrainers(Credentials credentials,
                                                       @PathVariable("username") String username) {
         AccessChecker.requireOwner(credentials, username);
@@ -128,6 +164,14 @@ public class TraineeController {
      * @throws EntityNotFoundException if one of the trainers does not exist
      */
     @PutMapping("/{username}/trainers")
+    @Operation(summary = "Replace the trainee's trainers list (item 11)",
+            description = "Only the trainee can change their own list. An empty list removes all trainers.")
+    @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
+    @ApiResponse(responseCode = "200", description = "The trainee's new list of trainers")
+    @ApiResponse(responseCode = "400", description = "The list is missing or has a blank username")
+    @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
+    @ApiResponse(responseCode = "403", description = "The username is not the signed-in user")
+    @ApiResponse(responseCode = "404", description = "One of the trainers does not exist")
     public List<TrainerSummary> updateTrainers(Credentials credentials,
                                                @PathVariable("username") String username,
                                                @Valid @RequestBody UpdateTraineeTrainersRequest request) {
@@ -150,6 +194,13 @@ public class TraineeController {
      * @throws AuthenticationException if the username or password is wrong
      */
     @GetMapping("/{username}/trainings")
+    @Operation(summary = "Trainee trainings by criteria (item 12)",
+            description = "Only the trainee can get their own trainings. All criteria are optional; dates are inclusive.")
+    @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
+    @ApiResponse(responseCode = "200", description = "Trainings that match all given criteria")
+    @ApiResponse(responseCode = "400", description = "Invalid date or training type")
+    @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
+    @ApiResponse(responseCode = "403", description = "The username is not the signed-in user")
     public List<TraineeTrainingResponse> getTrainings(
             Credentials credentials,
             @PathVariable("username") String username,
@@ -175,6 +226,15 @@ public class TraineeController {
      * @throws InvalidStateException   if the trainee already has this status
      */
     @PatchMapping("/{username}/active")
+    @Operation(summary = "Activate or deactivate own trainee profile (item 15)",
+            description = "Only the trainee can change their own status. "
+                    + "Not idempotent: sending the current status again returns 409.")
+    @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
+    @ApiResponse(responseCode = "200", description = "Status changed")
+    @ApiResponse(responseCode = "400", description = "isActive is missing")
+    @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
+    @ApiResponse(responseCode = "403", description = "The username is not the signed-in user")
+    @ApiResponse(responseCode = "409", description = "The trainee already has this status")
     public void changeActiveStatus(Credentials credentials,
                                    @PathVariable("username") String username,
                                    @Valid @RequestBody ActivationRequest request) {

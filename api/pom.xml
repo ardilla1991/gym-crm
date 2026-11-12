@@ -66,6 +66,12 @@
             <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <!-- Swagger: OpenAPI JSON and Swagger UI built from @Operation, @ApiResponse, @Tag on the controllers.
+             Without Spring Boot its configuration is registered by hand in WebConfig (springdoc FAQ) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
 
     </dependencies>
 

@@ -31,4 +31,23 @@ public class GymApplicationTest {
             application.stop();
         }
     }
+
+    @Test
+    void start_servesOpenApiDocumentation() throws Exception {
+        GymApplication application = GymApplication.start(0);
+        try {
+            HttpRequest request = HttpRequest.newBuilder(
+                    URI.create("http://localhost:" + application.port() + "/v3/api-docs")).build();
+
+            HttpResponse<String> response = HttpClient.newHttpClient()
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+
+            // springdoc read our annotations: the title and the endpoints are in the OpenAPI JSON
+            assertEquals(200, response.statusCode());
+            assertTrue(response.body().contains("Gym CRM API"));
+            assertTrue(response.body().contains("/api/v1/trainees/{username}"));
+        } finally {
+            application.stop();
+        }
+    }
 }

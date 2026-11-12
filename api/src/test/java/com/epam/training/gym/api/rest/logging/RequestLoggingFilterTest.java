@@ -6,10 +6,9 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.springframework.mock.web.MockHttpServletRequest;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RequestLoggingFilterTest {
 
@@ -29,6 +28,15 @@ public class RequestLoggingFilterTest {
         // Masking is only for the log: the client gets the real password
         assertEquals(201, response.getStatus());
         assertEquals(REGISTRATION_JSON, response.getContentAsString());
+    }
+
+    @Test
+    void doFilter_notRestPath_passesOriginalResponse() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Swagger UI files are not wrapped and not logged
+        filter.doFilter(new MockHttpServletRequest("GET", "/swagger-ui/index.html"), response,
+                (req, res) -> assertSame(response, res));
     }
 
     @Test

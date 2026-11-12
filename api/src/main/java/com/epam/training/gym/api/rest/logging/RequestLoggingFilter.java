@@ -1,5 +1,6 @@
 package com.epam.training.gym.api.rest.logging;
 
+import com.epam.training.gym.api.rest.ApiPaths;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpFilter;
@@ -16,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
- * Logs one line per REST call: endpoint, request body, status, response body and duration.
+ * Logs one line per REST call (paths under /api/v1): endpoint, request body, status, response body and duration.
  * Passwords are masked; the Authorization header is never logged.
  * 2xx and 3xx are logged as INFO, 4xx as WARN, 5xx as ERROR.
  */
@@ -34,6 +35,11 @@ public class RequestLoggingFilter extends HttpFilter {
     @Override
     protected void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
+        // Only REST calls are logged: Swagger UI pages and scripts would only add noise
+        if (!request.getRequestURI().startsWith(ApiPaths.API_V1)) {
+            chain.doFilter(request, response);
+            return;
+        }
         // The wrappers remember the bodies while the controller reads and writes them
         ContentCachingRequestWrapper cachedRequest = new ContentCachingRequestWrapper(request, MAX_LOGGED_BODY);
         ContentCachingResponseWrapper cachedResponse = new ContentCachingResponseWrapper(response);
