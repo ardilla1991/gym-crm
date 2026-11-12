@@ -9,6 +9,7 @@ import com.epam.training.gym.api.rest.mapper.TrainingMapper;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,7 +37,7 @@ public class TrainingController {
      * @throws EntityNotFoundException if the trainer does not exist
      */
     @PostMapping
-    public void add(Credentials credentials, @RequestBody AddTrainingRequest request) {
+    public void add(Credentials credentials, @Valid @RequestBody AddTrainingRequest request) {
         AccessChecker.requireOwner(credentials, request.traineeUsername());
         facade.addTraining(credentials, request.trainerUsername(), TrainingMapper.toEntity(request));
     }

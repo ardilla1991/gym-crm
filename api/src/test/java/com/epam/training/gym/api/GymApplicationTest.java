@@ -25,6 +25,8 @@ public class GymApplicationTest {
 
             assertEquals(200, response.statusCode());
             assertTrue(response.body().contains("UP"));
+            // TransactionIdFilter is registered: every response carries the id
+            assertTrue(response.headers().firstValue("X-Transaction-Id").isPresent());
         } finally {
             application.stop();
         }

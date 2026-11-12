@@ -1,6 +1,8 @@
 package com.epam.training.gym.api;
 
 import com.epam.training.gym.api.rest.WebConfig;
+import com.epam.training.gym.api.rest.logging.RequestLoggingFilter;
+import com.epam.training.gym.api.rest.logging.TransactionIdFilter;
 import com.epam.training.gym.config.AppConfig;
 import jakarta.servlet.ServletRegistration;
 import org.apache.catalina.Context;
@@ -50,6 +52,13 @@ public final class GymApplication {
             AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
             rootContext.register(AppConfig.class);
             servletContext.addListener(new ContextLoaderListener(rootContext));
+
+            // Filters run before DispatcherServlet, in the order they are added:
+            // first the transactionId, so that the request log line already has it
+            servletContext.addFilter("transactionId", new TransactionIdFilter())
+                    .addMappingForUrlPatterns(null, true, "/*");
+            servletContext.addFilter("requestLogging", new RequestLoggingFilter())
+                    .addMappingForUrlPatterns(null, true, "/*");
 
             // Web context: controllers. A child of the root context, owned by DispatcherServlet
             AnnotationConfigWebApplicationContext webContext = new AnnotationConfigWebApplicationContext();

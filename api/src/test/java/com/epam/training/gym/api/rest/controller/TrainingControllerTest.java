@@ -4,13 +4,14 @@ import com.epam.training.gym.api.facade.GymFacade;
 import com.epam.training.gym.api.rest.TestPaths;
 import com.epam.training.gym.api.rest.auth.CredentialsArgumentResolver;
 import com.epam.training.gym.api.rest.auth.TestAuth;
-import com.epam.training.gym.api.rest.exception.AccessDeniedException;
+import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
 import com.epam.training.gym.domain.Training;
 import com.epam.training.gym.domain.auth.Credentials;
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,7 +22,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -49,6 +50,7 @@ public class TrainingControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new TrainingController(facade))
                 .setCustomArgumentResolvers(new CredentialsArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
@@ -69,14 +71,36 @@ public class TrainingControllerTest {
     }
 
     @Test
-    void add_forAnotherTrainee_throwsAccessDenied() {
+    void add_forAnotherTrainee_returnsForbidden() throws Exception {
         // Signed in as John, but the training is for Emily
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(post(TestPaths.TRAININGS)
+        mockMvc.perform(post(TestPaths.TRAININGS)
                         .header(HttpHeaders.AUTHORIZATION, TestAuth.basic("John.Smith", "secret"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(ADD_JSON)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+                        .content(ADD_JSON))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(facade);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            // no training date
+            "{\"traineeUsername\": \"Emily.Johnson\", \"trainerUsername\": \"Anna.Lee\","
+                    + " \"trainingName\": \"Morning yoga\", \"trainingDuration\": 60}",
+            // zero duration
+            "{\"traineeUsername\": \"Emily.Johnson\", \"trainerUsername\": \"Anna.Lee\","
+                    + " \"trainingName\": \"Morning yoga\", \"trainingDate\": \"2026-10-05\", \"trainingDuration\": 0}",
+            // blank trainer username
+            "{\"traineeUsername\": \"Emily.Johnson\", \"trainerUsername\": \" \","
+                    + " \"trainingName\": \"Morning yoga\", \"trainingDate\": \"2026-10-05\", \"trainingDuration\": 60}"
+    })
+    void add_invalidRequest_returnsBadRequest(String json) throws Exception {
+        mockMvc.perform(post(TestPaths.TRAININGS)
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+
         verifyNoInteractions(facade);
     }
 

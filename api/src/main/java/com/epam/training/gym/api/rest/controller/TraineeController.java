@@ -15,6 +15,7 @@ import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.exception.InvalidStateException;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +42,7 @@ public class TraineeController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RegistrationResponse register(@RequestBody TraineeRegistrationRequest request) {
+    public RegistrationResponse register(@Valid @RequestBody TraineeRegistrationRequest request) {
         Trainee created = facade.createTrainee(TraineeMapper.toEntity(request));
         return new RegistrationResponse(created.getUser().getUsername(), created.getUser().getPassword());
     }
@@ -75,7 +76,7 @@ public class TraineeController {
     @PutMapping("/{username}")
     public TraineeProfileResponse update(Credentials credentials,
                                          @PathVariable("username") String username,
-                                         @RequestBody UpdateTraineeRequest request) {
+                                         @Valid @RequestBody UpdateTraineeRequest request) {
         AccessChecker.requireOwner(credentials, username);
         Trainee updated = facade.updateTrainee(credentials, TraineeMapper.toEntity(request));
 
@@ -129,7 +130,7 @@ public class TraineeController {
     @PutMapping("/{username}/trainers")
     public List<TrainerSummary> updateTrainers(Credentials credentials,
                                                @PathVariable("username") String username,
-                                               @RequestBody UpdateTraineeTrainersRequest request) {
+                                               @Valid @RequestBody UpdateTraineeTrainersRequest request) {
         AccessChecker.requireOwner(credentials, username);
         return TrainerMapper.toSummaries(facade.updateTraineeTrainers(credentials, request.trainerUsernames()));
     }
@@ -176,7 +177,7 @@ public class TraineeController {
     @PatchMapping("/{username}/active")
     public void changeActiveStatus(Credentials credentials,
                                    @PathVariable("username") String username,
-                                   @RequestBody ActivationRequest request) {
+                                   @Valid @RequestBody ActivationRequest request) {
         AccessChecker.requireOwner(credentials, username);
         facade.changeTraineeActiveStatus(credentials, request.isActive());
     }

@@ -4,24 +4,26 @@ import com.epam.training.gym.api.facade.GymFacade;
 import com.epam.training.gym.api.rest.TestPaths;
 import com.epam.training.gym.api.rest.auth.CredentialsArgumentResolver;
 import com.epam.training.gym.api.rest.auth.TestAuth;
-import com.epam.training.gym.api.rest.dto.*;
-import com.epam.training.gym.api.rest.exception.AccessDeniedException;
+import com.epam.training.gym.api.rest.dto.RegistrationResponse;
+import com.epam.training.gym.api.rest.dto.TraineeProfileResponse;
+import com.epam.training.gym.api.rest.dto.TrainerSummary;
+import com.epam.training.gym.api.rest.exception.ApiError;
+import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
 import com.epam.training.gym.api.rest.mapper.TraineeMapper;
 import com.epam.training.gym.api.rest.mapper.TrainerMapper;
 import com.epam.training.gym.domain.*;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
-import com.epam.training.gym.service.exception.AuthenticationException;
+import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.exception.InvalidStateException;
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,9 +36,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,6 +69,7 @@ public class TraineeControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new TraineeController(facade))
                 .setCustomArgumentResolvers(new CredentialsArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
@@ -100,6 +101,33 @@ public class TraineeControllerTest {
         assertEquals("John", captor.getValue().getUser().getFirstName());
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"lastName\": \"Smith\"}",                                         // no first name
+            "{\"firstName\": \" \", \"lastName\": \"Smith\"}",                   // blank first name
+            "{\"firstName\": \"John\"}",                                         // no last name
+            "{\"firstName\": \"John\", \"lastName\": \"Smith\", \"dateOfBirth\": \"2999-01-01\"}" // future date
+    })
+    void register_invalidRequest_returnsBadRequest(String json) throws Exception {
+        mockMvc.perform(post(TestPaths.TRAINEES).contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(facade);
+    }
+
+    @Test
+    void register_invalidRequest_namesEveryInvalidField() throws Exception {
+        String body = mockMvc.perform(post(TestPaths.TRAINEES)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\": \" \"}"))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        String message = JSON.readValue(body, ApiError.class).message();
+        assertTrue(message.contains("firstName"), message);
+        assertTrue(message.contains("lastName"), message);
+    }
+
     @Test
     void getProfile_anySignedInUser_canReadAnotherTraineeProfile() throws Exception {
         // Emily reads John's profile: reading is allowed to any signed-in user
@@ -117,11 +145,26 @@ public class TraineeControllerTest {
     }
 
     @Test
-    void getProfile_noAuthorizationHeader_doesNotCallFacade() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(get(TestPaths.TRAINEES + "/John.Smith")));
-        assertInstanceOf(AuthenticationException.class, e.getCause());
+    void getProfile_noAuthorizationHeader_doesNotCallFacade() throws Exception {
+        mockMvc.perform(get(TestPaths.TRAINEES + "/John.Smith"))
+                .andExpect(status().isUnauthorized());
+
         verifyNoInteractions(facade);
+    }
+
+    @Test
+    void getProfile_unknownTrainee_returnsNotFound() throws Exception {
+        when(facade.getTraineeProfile(EMILY, "Nobody.Here"))
+                .thenThrow(new EntityNotFoundException("Trainee", "Nobody.Here"));
+
+        String body = mockMvc.perform(get(TestPaths.TRAINEES + "/Nobody.Here")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER))
+                .andExpect(status().isNotFound())
+                .andReturn().getResponse().getContentAsString();
+
+        ApiError error = JSON.readValue(body, ApiError.class);
+        assertEquals(404, error.status());
+        assertTrue(error.message().contains("Nobody.Here"), error.message());
     }
 
     @Test
@@ -151,14 +194,28 @@ public class TraineeControllerTest {
     }
 
     @Test
-    void update_anotherTraineeProfile_throwsAccessDenied() {
-        // Emily tries to update John's profile
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(put(TestPaths.TRAINEES + "/John.Smith")
+    void update_anotherTraineeProfile_returnsForbidden() throws Exception {
+        mockMvc.perform(put(TestPaths.TRAINEES + "/John.Smith")
                         .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(UPDATE_JSON)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+                        .content(UPDATE_JSON))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(facade);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"firstName\": \"Emma\", \"lastName\": \"Johnson\"}",                     // no isActive
+            "{\"firstName\": \"\", \"lastName\": \"Johnson\", \"isActive\": true}"      // blank first name
+    })
+    void update_invalidRequest_returnsBadRequest(String json) throws Exception {
+        mockMvc.perform(put(TestPaths.TRAINEES + "/Emily.Johnson")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+
         verifyNoInteractions(facade);
     }
 
@@ -172,11 +229,11 @@ public class TraineeControllerTest {
     }
 
     @Test
-    void delete_anotherTraineeProfile_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(delete(TestPaths.TRAINEES + "/John.Smith")
-                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+    void delete_anotherTraineeProfile_returnsForbidden() throws Exception {
+        mockMvc.perform(delete(TestPaths.TRAINEES + "/John.Smith")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER))
+                .andExpect(status().isForbidden());
+
         verifyNoInteractions(facade);
     }
 
@@ -194,11 +251,11 @@ public class TraineeControllerTest {
     }
 
     @Test
-    void getUnassignedTrainers_anotherTrainee_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(get(TestPaths.TRAINEES + "/John.Smith/unassigned-trainers")
-                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+    void getUnassignedTrainers_anotherTrainee_returnsForbidden() throws Exception {
+        mockMvc.perform(get(TestPaths.TRAINEES + "/John.Smith/unassigned-trainers")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER))
+                .andExpect(status().isForbidden());
+
         verifyNoInteractions(facade);
     }
 
@@ -218,13 +275,28 @@ public class TraineeControllerTest {
     }
 
     @Test
-    void updateTrainers_anotherTrainee_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(put(TestPaths.TRAINEES + "/John.Smith/trainers")
+    void updateTrainers_anotherTrainee_returnsForbidden() throws Exception {
+        mockMvc.perform(put(TestPaths.TRAINEES + "/John.Smith/trainers")
                         .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(TRAINERS_JSON)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+                        .content(TRAINERS_JSON))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(facade);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{}",                                                 // no list
+            "{\"trainerUsernames\": [\"Anna.Lee\", \" \"]}"       // blank username in the list
+    })
+    void updateTrainers_invalidRequest_returnsBadRequest(String json) throws Exception {
+        mockMvc.perform(put(TestPaths.TRAINEES + "/Emily.Johnson/trainers")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+
         verifyNoInteractions(facade);
     }
 
@@ -260,11 +332,24 @@ public class TraineeControllerTest {
     }
 
     @Test
-    void getTrainings_anotherTrainee_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(get(TestPaths.TRAINEES + "/John.Smith/trainings")
-                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+    void getTrainings_anotherTrainee_returnsForbidden() throws Exception {
+        mockMvc.perform(get(TestPaths.TRAINEES + "/John.Smith/trainings")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(facade);
+    }
+
+    @Test
+    void getTrainings_invalidDate_returnsBadRequest() throws Exception {
+        String body = mockMvc.perform(get(TestPaths.TRAINEES + "/Emily.Johnson/trainings")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .param("periodFrom", "abc"))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        assertEquals(new ApiError(400, "Bad Request", "Invalid value 'abc' of parameter 'periodFrom'"),
+                JSON.readValue(body, ApiError.class));
         verifyNoInteractions(facade);
     }
 
@@ -280,27 +365,37 @@ public class TraineeControllerTest {
     }
 
     @Test
-    void changeActiveStatus_sameStatus_throwsInvalidState() {
+    void changeActiveStatus_sameStatus_returnsConflict() throws Exception {
         // Not idempotent: the trainee is already inactive
         doThrow(new InvalidStateException("Trainee is already inactive"))
                 .when(facade).changeTraineeActiveStatus(EMILY, false);
 
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(patch(TestPaths.TRAINEES + "/Emily.Johnson/active")
+        mockMvc.perform(patch(TestPaths.TRAINEES + "/Emily.Johnson/active")
                         .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DEACTIVATE_JSON)));
-        assertInstanceOf(InvalidStateException.class, e.getCause());
+                        .content(DEACTIVATE_JSON))
+                .andExpect(status().isConflict());
     }
 
     @Test
-    void changeActiveStatus_anotherTrainee_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(patch(TestPaths.TRAINEES + "/John.Smith/active")
+    void changeActiveStatus_anotherTrainee_returnsForbidden() throws Exception {
+        mockMvc.perform(patch(TestPaths.TRAINEES + "/John.Smith/active")
                         .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DEACTIVATE_JSON)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+                        .content(DEACTIVATE_JSON))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(facade);
+    }
+
+    @Test
+    void changeActiveStatus_noIsActive_returnsBadRequest() throws Exception {
+        mockMvc.perform(patch(TestPaths.TRAINEES + "/Emily.Johnson/active")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
         verifyNoInteractions(facade);
     }
 

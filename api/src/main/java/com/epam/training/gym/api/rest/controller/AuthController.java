@@ -5,6 +5,7 @@ import com.epam.training.gym.api.rest.ApiPaths;
 import com.epam.training.gym.api.rest.dto.ChangePasswordRequest;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.service.exception.AuthenticationException;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 /** Login and password change for any user: a trainee or a trainer. */
@@ -41,7 +42,7 @@ public class AuthController {
      * @throws AuthenticationException if the old password is wrong
      */
     @PutMapping("/password")
-    public void changePassword(Credentials credentials, @RequestBody ChangePasswordRequest request) {
+    public void changePassword(Credentials credentials, @Valid @RequestBody ChangePasswordRequest request) {
         facade.changePassword(credentials, request.newPassword());
     }
 }

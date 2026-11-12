@@ -5,11 +5,10 @@ import com.epam.training.gym.api.rest.TestPaths;
 import com.epam.training.gym.api.rest.auth.CredentialsArgumentResolver;
 import com.epam.training.gym.api.rest.auth.TestAuth;
 import com.epam.training.gym.api.rest.dto.TrainingTypeResponse;
+import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
 import com.epam.training.gym.domain.TrainingType;
 import com.epam.training.gym.domain.TrainingTypeName;
 import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.service.exception.AuthenticationException;
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -45,6 +44,7 @@ public class TrainingTypeControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new TrainingTypeController(facade))
                 .setCustomArgumentResolvers(new CredentialsArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
@@ -62,11 +62,11 @@ public class TrainingTypeControllerTest {
     }
 
     @Test
-    void getAll_noAuthorizationHeader_doesNotCallFacade() {
+    void getAll_noAuthorizationHeader_doesNotCallFacade() throws Exception {
         // Note 3: even the list of types requires authentication
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(get(TestPaths.TRAINING_TYPES)));
-        assertInstanceOf(AuthenticationException.class, e.getCause());
+        mockMvc.perform(get(TestPaths.TRAINING_TYPES))
+                .andExpect(status().isUnauthorized());
+
         verifyNoInteractions(facade);
     }
 

@@ -13,6 +13,7 @@ import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.exception.InvalidStateException;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +40,7 @@ public class TrainerController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RegistrationResponse register(@RequestBody TrainerRegistrationRequest request) {
+    public RegistrationResponse register(@Valid @RequestBody TrainerRegistrationRequest request) {
         Trainer created = facade.createTrainer(TrainerMapper.toEntity(request));
 
         return new RegistrationResponse(created.getUser().getUsername(), created.getUser().getPassword());
@@ -74,7 +75,7 @@ public class TrainerController {
     @PutMapping("/{username}")
     public TrainerProfileResponse update(Credentials credentials,
                                          @PathVariable("username") String username,
-                                         @RequestBody UpdateTrainerRequest request) {
+                                         @Valid @RequestBody UpdateTrainerRequest request) {
         AccessChecker.requireOwner(credentials, username);
         Trainer updated = facade.updateTrainer(credentials, TrainerMapper.toEntity(request));
 
@@ -120,7 +121,7 @@ public class TrainerController {
     @PatchMapping("/{username}/active")
     public void changeActiveStatus(Credentials credentials,
                                    @PathVariable("username") String username,
-                                   @RequestBody ActivationRequest request) {
+                                   @Valid @RequestBody ActivationRequest request) {
         AccessChecker.requireOwner(credentials, username);
         facade.changeTrainerActiveStatus(credentials, request.isActive());
     }

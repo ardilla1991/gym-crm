@@ -6,7 +6,7 @@ import com.epam.training.gym.api.rest.auth.CredentialsArgumentResolver;
 import com.epam.training.gym.api.rest.auth.TestAuth;
 import com.epam.training.gym.api.rest.dto.RegistrationResponse;
 import com.epam.training.gym.api.rest.dto.TrainerProfileResponse;
-import com.epam.training.gym.api.rest.exception.AccessDeniedException;
+import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
 import com.epam.training.gym.api.rest.mapper.TrainerMapper;
 import com.epam.training.gym.domain.Trainer;
 import com.epam.training.gym.domain.TrainingType;
@@ -15,17 +15,17 @@ import com.epam.training.gym.domain.User;
 import com.epam.training.gym.domain.auth.Credentials;
 import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.exception.InvalidStateException;
-import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -36,9 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,6 +69,7 @@ public class TrainerControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new TrainerController(facade))
                 .setCustomArgumentResolvers(new CredentialsArgumentResolver())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
@@ -97,6 +96,28 @@ public class TrainerControllerTest {
         ArgumentCaptor<Trainer> captor = ArgumentCaptor.forClass(Trainer.class);
         verify(facade).createTrainer(captor.capture());
         assertEquals(TrainingTypeName.YOGA, captor.getValue().getSpecialization().getTrainingTypeName());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"firstName\": \"Anna\", \"lastName\": \"Lee\"}",                              // no specialization
+            "{\"firstName\": \"\", \"lastName\": \"Lee\", \"specialization\": \"YOGA\"}"      // blank first name
+    })
+    void register_invalidRequest_returnsBadRequest(String json) throws Exception {
+        mockMvc.perform(post(TestPaths.TRAINERS).contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(facade);
+    }
+
+    @Test
+    void register_unknownSpecialization_returnsBadRequest() throws Exception {
+        mockMvc.perform(post(TestPaths.TRAINERS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\": \"Anna\", \"lastName\": \"Lee\", \"specialization\": \"yoga\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(facade);
     }
 
     @Test
@@ -136,13 +157,24 @@ public class TrainerControllerTest {
     }
 
     @Test
-    void update_anotherTrainerProfile_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(put(TestPaths.TRAINERS + "/Mark.Brown")
+    void update_anotherTrainerProfile_returnsForbidden() throws Exception {
+        mockMvc.perform(put(TestPaths.TRAINERS + "/Mark.Brown")
                         .header(HttpHeaders.AUTHORIZATION, ANNA_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(UPDATE_JSON)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+                        .content(UPDATE_JSON))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(facade);
+    }
+
+    @Test
+    void update_noIsActive_returnsBadRequest() throws Exception {
+        mockMvc.perform(put(TestPaths.TRAINERS + "/Anna.Lee")
+                        .header(HttpHeaders.AUTHORIZATION, ANNA_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\": \"Hanna\", \"lastName\": \"Lee\"}"))
+                .andExpect(status().isBadRequest());
+
         verifyNoInteractions(facade);
     }
 
@@ -175,11 +207,11 @@ public class TrainerControllerTest {
     }
 
     @Test
-    void getTrainings_anotherTrainer_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(get(TestPaths.TRAINERS + "/Mark.Brown/trainings")
-                        .header(HttpHeaders.AUTHORIZATION, ANNA_HEADER)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+    void getTrainings_anotherTrainer_returnsForbidden() throws Exception {
+        mockMvc.perform(get(TestPaths.TRAINERS + "/Mark.Brown/trainings")
+                        .header(HttpHeaders.AUTHORIZATION, ANNA_HEADER))
+                .andExpect(status().isForbidden());
+
         verifyNoInteractions(facade);
     }
 
@@ -195,26 +227,36 @@ public class TrainerControllerTest {
     }
 
     @Test
-    void changeActiveStatus_sameStatus_throwsInvalidState() {
+    void changeActiveStatus_sameStatus_returnsConflict() throws Exception {
         doThrow(new InvalidStateException("Trainer is already inactive"))
                 .when(facade).changeTrainerActiveStatus(ANNA, false);
 
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(patch(TestPaths.TRAINERS + "/Anna.Lee/active")
+        mockMvc.perform(patch(TestPaths.TRAINERS + "/Anna.Lee/active")
                         .header(HttpHeaders.AUTHORIZATION, ANNA_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DEACTIVATE_JSON)));
-        assertInstanceOf(InvalidStateException.class, e.getCause());
+                        .content(DEACTIVATE_JSON))
+                .andExpect(status().isConflict());
     }
 
     @Test
-    void changeActiveStatus_anotherTrainer_throwsAccessDenied() {
-        ServletException e = assertThrows(ServletException.class, () ->
-                mockMvc.perform(patch(TestPaths.TRAINERS + "/Mark.Brown/active")
+    void changeActiveStatus_anotherTrainer_returnsForbidden() throws Exception {
+        mockMvc.perform(patch(TestPaths.TRAINERS + "/Mark.Brown/active")
                         .header(HttpHeaders.AUTHORIZATION, ANNA_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(DEACTIVATE_JSON)));
-        assertInstanceOf(AccessDeniedException.class, e.getCause());
+                        .content(DEACTIVATE_JSON))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(facade);
+    }
+
+    @Test
+    void changeActiveStatus_noIsActive_returnsBadRequest() throws Exception {
+        mockMvc.perform(patch(TestPaths.TRAINERS + "/Anna.Lee/active")
+                        .header(HttpHeaders.AUTHORIZATION, ANNA_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
         verifyNoInteractions(facade);
     }
 
