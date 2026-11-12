@@ -183,6 +183,16 @@ void changeActiveStatus_inactiveTrainee_activates() {
         assertTrue(trainee.getUser().isActive());
     }
 
+    @Test
+    void changeActiveStatus_activeTrainee_deactivates() {
+        Trainee trainee = existingTrainee(true);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+        traineeService.changeActiveStatus(VALID_CREDENTIALS, false);
+
+        assertFalse(trainee.getUser().isActive());
+    }
+
     /** A trainee as if loaded from the database: with username and password. */
     private static Trainee existingTrainee(boolean active) {
         return Trainee.builder()

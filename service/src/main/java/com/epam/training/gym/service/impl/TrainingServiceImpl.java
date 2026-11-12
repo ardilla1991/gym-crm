@@ -62,14 +62,6 @@ public class TrainingServiceImpl implements TrainingService {
     }
 
     @Override
-    public Training create(Training training) {
-        Training saved = trainingDao.save(training);
-        log.info("Training created: id={}, name={}", saved.getId(), saved.getTrainingName());
-
-        return saved;
-    }
-
-    @Override
     @Transactional
     public Training addTraining(Credentials traineeCredentials, String trainerUsername, Training training) {
         Trainee trainee = traineeService.authenticate(traineeCredentials);

@@ -2,6 +2,8 @@ package com.epam.training.gym.api.rest.logging;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.nio.charset.StandardCharsets;
@@ -37,6 +39,19 @@ public class RequestLoggingFilterTest {
         // Swagger UI files are not wrapped and not logged
         filter.doFilter(new MockHttpServletRequest("GET", "/swagger-ui/index.html"), response,
                 (req, res) -> assertSame(response, res));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {200, 404, 500})
+    void doFilter_anyStatus_reachesClient(int status) throws Exception {
+        // Each status is logged at its own level (INFO, WARN, ERROR); the client gets it unchanged
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/trainees/John.Smith/trainings");
+        request.setQueryString("periodFrom=2026-01-01");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> ((HttpServletResponse) res).setStatus(status));
+
+        assertEquals(status, response.getStatus());
     }
 
     @Test

@@ -9,8 +9,6 @@ import java.util.List;
 
 public interface TrainingService {
 
-    Training create(Training training);
-
     /**
      * The trainee adds a training with the given trainer.
      * From the training only the name, date and duration are used;
