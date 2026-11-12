@@ -48,14 +48,6 @@ public class GymFacade {
         return trainerService.matchCredentials(credentials);
     }
 
-    public void changeTraineePassword(Credentials credentials, String newPassword) {
-        traineeService.changePassword(credentials, newPassword);
-    }
-
-    public void changeTrainerPassword(Credentials credentials, String newPassword) {
-        trainerService.changePassword(credentials, newPassword);
-    }
-
     public void changeTraineeActiveStatus(Credentials credentials, boolean active) {
         traineeService.changeActiveStatus(credentials, active);
     }

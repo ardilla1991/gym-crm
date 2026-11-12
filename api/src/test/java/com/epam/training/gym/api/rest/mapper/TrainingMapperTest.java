@@ -8,6 +8,7 @@ import com.epam.training.gym.domain.*;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -48,6 +49,32 @@ public class TrainingMapperTest {
     @Test
     void toResponse_trainingType_containsIdAndName() {
         assertEquals(new TrainingTypeResponse(2L, TrainingTypeName.YOGA), TrainingMapper.toResponse(YOGA));
+    }
+
+    @Test
+    void toTraineeTrainingResponses_convertsEachTraining() {
+        Training training = training();
+
+        List<TraineeTrainingResponse> responses = TrainingMapper.toTraineeTrainingResponses(List.of(training, training));
+
+        assertEquals(List.of(TrainingMapper.toTraineeTrainingResponse(training),
+                TrainingMapper.toTraineeTrainingResponse(training)), responses);
+    }
+
+    @Test
+    void toTrainerTrainingResponses_convertsEachTraining() {
+        Training training = training();
+
+        List<TrainerTrainingResponse> responses = TrainingMapper.toTrainerTrainingResponses(List.of(training, training));
+
+        assertEquals(List.of(TrainingMapper.toTrainerTrainingResponse(training),
+                TrainingMapper.toTrainerTrainingResponse(training)), responses);
+    }
+
+    @Test
+    void toResponses_convertsEachTrainingType() {
+        assertEquals(List.of(new TrainingTypeResponse(2L, TrainingTypeName.YOGA)),
+                TrainingMapper.toResponses(List.of(YOGA)));
     }
 
     private static Training training() {

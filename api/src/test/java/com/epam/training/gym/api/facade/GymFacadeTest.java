@@ -67,13 +67,6 @@ public class GymFacadeTest {
     }
 
     @Test
-    void changeTraineePassword_delegatesToService() {
-        facade.changeTraineePassword(CREDENTIALS, NEW_PASSWORD);
-
-        verify(traineeService).changePassword(CREDENTIALS, NEW_PASSWORD);
-    }
-
-    @Test
     void changeTraineeActiveStatus_delegatesToService() {
         facade.changeTraineeActiveStatus(CREDENTIALS, false);
 
@@ -95,13 +88,6 @@ public class GymFacadeTest {
         when(trainerService.matchCredentials(CREDENTIALS)).thenReturn(false);
 
         assertFalse(facade.matchTrainerCredentials(CREDENTIALS));
-    }
-
-    @Test
-    void changeTrainerPassword_delegatesToService() {
-        facade.changeTrainerPassword(CREDENTIALS, NEW_PASSWORD);
-
-        verify(trainerService).changePassword(CREDENTIALS, NEW_PASSWORD);
     }
 
     @Test
