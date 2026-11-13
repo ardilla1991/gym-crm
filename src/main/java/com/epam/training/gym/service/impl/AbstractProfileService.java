@@ -72,11 +72,12 @@ public abstract class AbstractProfileService<M extends UserProfile, E extends Pr
     @Override
     @Transactional
     public void changePassword(Credentials credentials, String newPassword) {
+        UserEntity user = authenticateEntity(credentials).getUser();
         if (newPassword == null || newPassword.isBlank()) {
             throw new IllegalArgumentException("New password must not be blank");
         }
         // A managed entity: Hibernate writes the change at commit (dirty checking)
-        authenticateEntity(credentials).getUser().setPassword(newPassword);
+        user.setPassword(newPassword);
         log.info("{} password changed: username={}", profileName, credentials.username());
     }
 

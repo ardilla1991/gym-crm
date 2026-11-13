@@ -98,9 +98,9 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer, TrainerE
     @Override
     @Transactional
     public Trainer update(Credentials credentials, Trainer newData) {
+        TrainerEntity trainer = authenticateEntity(credentials);
         // Only the user part is validated: the specialization is not changed, so it may be missing here
         entityValidator.validate(newData.getUser());
-        TrainerEntity trainer = authenticateEntity(credentials);
 
         // The entity is managed: Hibernate writes the changes at commit (dirty checking)
         trainer.getUser().setFirstName(newData.getUser().getFirstName());

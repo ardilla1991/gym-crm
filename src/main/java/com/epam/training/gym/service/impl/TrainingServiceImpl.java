@@ -14,6 +14,7 @@ import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainingService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.mapper.TraineeEntityMapper;
 import com.epam.training.gym.service.mapper.TrainerEntityMapper;
 import com.epam.training.gym.service.mapper.TrainingEntityMapper;
@@ -76,6 +77,9 @@ public class TrainingServiceImpl implements TrainingService {
         TraineeEntity trainee = traineeDao.findByUsername(traineeCredentials.username()).orElseThrow();
         TrainerEntity trainer = trainerDao.findByUsername(trainerUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer", trainerUsername));
+        if (!trainer.getUser().isActive()) {
+            throw new InvalidStateException("Trainer " + trainerUsername + " is not active");
+        }
         TrainingTypeEntity trainingType = training.getTrainingType() != null
                 ? findTrainingType(training.getTrainingType().getTrainingTypeName())
                 : null;

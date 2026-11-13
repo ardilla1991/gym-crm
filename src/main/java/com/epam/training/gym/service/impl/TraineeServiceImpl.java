@@ -99,8 +99,8 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee, TraineeE
     @Override
     @Transactional
     public Trainee update(Credentials credentials, Trainee newData) {
-        entityValidator.validate(newData);
         TraineeEntity trainee = authenticateEntity(credentials);
+        entityValidator.validate(newData);
 
         // Only these fields come from the caller; id, username, password and status stay as they are.
         // The entity is managed: Hibernate writes the changes at commit (dirty checking)
@@ -149,7 +149,7 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee, TraineeE
     public List<Trainer> updateTrainers(Credentials credentials, List<String> trainerUsernames) {
         TraineeEntity trainee = authenticateEntity(credentials);
 
-        Set<String> requested = new HashSet<>(trainerUsernames);
+        Set<String> requested = validTrainerUsernames(trainerUsernames);
         List<TrainerEntity> trainers = trainerDao.findByUsernames(requested);
         if (trainers.size() != requested.size()) {
             trainers.forEach(trainer -> requested.remove(trainer.getUser().getUsername()));
@@ -163,5 +163,20 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee, TraineeE
         return trainers.stream()
                 .map(TrainerEntityMapper::toModel)
                 .toList();
+    }
+
+    /** The list must not be null or empty and must have no blank or repeated usernames. */
+    private static Set<String> validTrainerUsernames(List<String> trainerUsernames) {
+        if (trainerUsernames == null || trainerUsernames.isEmpty()) {
+            throw new IllegalArgumentException("Trainers list must not be empty");
+        }
+        if (trainerUsernames.stream().anyMatch(username -> username == null || username.isBlank())) {
+            throw new IllegalArgumentException("Trainer username must not be blank");
+        }
+        Set<String> unique = new HashSet<>(trainerUsernames);
+        if (unique.size() != trainerUsernames.size()) {
+            throw new IllegalArgumentException("Trainer usernames must not repeat: " + trainerUsernames);
+        }
+        return unique;
     }
 }

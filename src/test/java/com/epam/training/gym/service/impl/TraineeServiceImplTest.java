@@ -16,6 +16,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
@@ -24,9 +25,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -151,10 +154,21 @@ public class TraineeServiceImplTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" ", "\t"})
-    void changePassword_blankNewPassword_throwsWithoutDatabaseAccess(String newPassword) {
+    void changePassword_blankNewPassword_throwsAndKeepsOldPassword(String newPassword) {
+        TraineeEntity trainee = existingTrainee(true);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
         assertThrows(IllegalArgumentException.class, () -> traineeService.changePassword(VALID_CREDENTIALS, newPassword));
 
-        verify(traineeDao, never()).findByUsername(any());
+        assertEquals(CURRENT_PASSWORD, trainee.getUser().getPassword());
+    }
+
+    @Test
+    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword() {
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
+
+        assertThrows(AuthenticationException.class,
+                () -> traineeService.changePassword(WRONG_PASSWORD_CREDENTIALS, " "));
     }
 
     // ---------- toggleActive ----------
@@ -267,13 +281,25 @@ public class TraineeServiceImplTest {
     }
 
     @Test
-    void update_invalidData_isRejectedBeforeDatabaseAccess() {
+    void update_wrongPassword_isRejectedBeforeValidation() {
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
+
+        assertThrows(AuthenticationException.class,
+                () -> traineeService.update(WRONG_PASSWORD_CREDENTIALS, Trainee.builder().build()));
+
+        verify(entityValidator, never()).validate(any());
+    }
+
+    @Test
+    void update_invalidData_isRejectedAndChangesNothing() {
+        TraineeEntity trainee = existingTrainee(true);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
         Trainee newData = Trainee.builder().build();
         doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(newData);
 
         assertThrows(ConstraintViolationException.class, () -> traineeService.update(VALID_CREDENTIALS, newData));
 
-        verify(traineeDao, never()).findByUsername(any());
+        assertEquals("John", trainee.getUser().getFirstName());
     }
 
     // ---------- delete ----------
@@ -352,8 +378,7 @@ public class TraineeServiceImplTest {
         TrainerEntity mark = trainerWithUsername("Mark.Hill");
         when(trainerDao.findByUsernames(Set.of("Anna.Lee", "Mark.Hill"))).thenReturn(List.of(anna, mark));
 
-        // Anna.Lee twice: duplicates are ignored
-        traineeService.updateTrainers(VALID_CREDENTIALS, List.of("Anna.Lee", "Mark.Hill", "Anna.Lee"));
+        traineeService.updateTrainers(VALID_CREDENTIALS, List.of("Anna.Lee", "Mark.Hill"));
 
         assertEquals(Set.of(anna, mark), trainee.getTrainers());
     }
@@ -372,6 +397,29 @@ public class TraineeServiceImplTest {
 
         assertTrue(exception.getMessage().contains("No.Body"));
         assertEquals(Set.of(oldTrainer), trainee.getTrainers());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @MethodSource("listsWithBadUsernames")
+    void updateTrainers_invalidList_throwsAndKeepsOldList(List<String> trainerUsernames) {
+        TraineeEntity trainee = existingTrainee(true);
+        TrainerEntity oldTrainer = trainerWithUsername("Old.Trainer");
+        trainee.getTrainers().add(oldTrainer);
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> traineeService.updateTrainers(VALID_CREDENTIALS, trainerUsernames));
+
+        verify(trainerDao, never()).findByUsernames(any());
+        assertEquals(Set.of(oldTrainer), trainee.getTrainers());
+    }
+
+    static Stream<List<String>> listsWithBadUsernames() {
+        return Stream.of(
+                List.of("Anna.Lee", " "),             // blank username
+                Arrays.asList("Anna.Lee", null),      // null username
+                List.of("Anna.Lee", "Anna.Lee"));     // repeated username
     }
 
     private static TraineeEntity traineeWithUsername(String username) {

@@ -136,11 +136,22 @@ public class TrainerServiceImplTest {
     }
 
     @Test
-    void changePassword_blankNewPassword_throwsWithoutDatabaseAccess() {
+    void changePassword_blankNewPassword_throwsAndKeepsOldPassword() {
+        TrainerEntity trainer = existingTrainer(true);
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+
         assertThrows(IllegalArgumentException.class,
                 () -> trainerService.changePassword(VALID_CREDENTIALS, " "));
 
-        verify(trainerDao, never()).findByUsername(any());
+        assertEquals(CURRENT_PASSWORD, trainer.getUser().getPassword());
+    }
+
+    @Test
+    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword() {
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
+
+        assertThrows(AuthenticationException.class,
+                () -> trainerService.changePassword(WRONG_PASSWORD_CREDENTIALS, " "));
     }
 
     // ---------- toggleActive ----------
@@ -236,13 +247,25 @@ public class TrainerServiceImplTest {
     }
 
     @Test
-    void update_invalidNames_isRejectedBeforeDatabaseAccess() {
+    void update_wrongPassword_isRejectedBeforeValidation() {
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
+        Trainer newData = Trainer.builder().user(User.builder().build()).build();
+
+        assertThrows(AuthenticationException.class, () -> trainerService.update(WRONG_PASSWORD_CREDENTIALS, newData));
+
+        verify(entityValidator, never()).validate(any());
+    }
+
+    @Test
+    void update_invalidNames_isRejectedAndChangesNothing() {
+        TrainerEntity trainer = existingTrainer(true);
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
         Trainer newData = Trainer.builder().user(User.builder().build()).build();
         doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(newData.getUser());
 
         assertThrows(ConstraintViolationException.class, () -> trainerService.update(VALID_CREDENTIALS, newData));
 
-        verify(trainerDao, never()).findByUsername(any());
+        assertEquals("Anna", trainer.getUser().getFirstName());
     }
 
     // ---------- getTrainings ----------

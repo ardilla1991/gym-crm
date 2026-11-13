@@ -10,6 +10,7 @@ import com.epam.training.gym.persistence.entity.*;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.validation.EntityValidator;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +68,7 @@ public class TrainingServiceImplTest {
         trainee = TraineeEntity.builder().user(UserEntity.builder().username("John.Smith").build()).build();
         yogaFromDb = new TrainingTypeEntity(2L, TrainingTypeName.YOGA);
         trainer = TrainerEntity.builder()
-                .user(UserEntity.builder().username(TRAINER_USERNAME).build())
+                .user(UserEntity.builder().username(TRAINER_USERNAME).isActive(true).build())
                 .specialization(yogaFromDb)
                 .build();
     }
@@ -125,6 +126,21 @@ public class TrainingServiceImplTest {
                 () -> trainingService.addTraining(TRAINEE_CREDENTIALS, TRAINER_USERNAME, newTraining()));
 
         verify(trainingDao, never()).save(any());
+    }
+
+    @Test
+    void addTraining_inactiveTrainer_savesNothing() {
+        trainer.getUser().setActive(false);
+        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(traineeModel);
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee));
+        when(trainerDao.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
+
+        assertThrows(InvalidStateException.class,
+                () -> trainingService.addTraining(TRAINEE_CREDENTIALS, TRAINER_USERNAME, newTraining()));
+
+        verify(trainingTypeDao, never()).findByName(any());
+        verify(trainingDao, never()).save(any());
+        assertTrue(trainee.getTrainers().isEmpty());
     }
 
     @Test

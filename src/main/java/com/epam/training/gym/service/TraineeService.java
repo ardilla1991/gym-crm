@@ -37,6 +37,7 @@ public interface TraineeService extends AccountService<Trainee> {
      * @return the trainers now assigned to the trainee
      * @throws com.epam.training.gym.service.exception.EntityNotFoundException if any username is unknown;
      *         the list is not changed then
+     * @throws IllegalArgumentException if the list is null or empty, or has blank or repeated usernames
      */
     List<Trainer> updateTrainers(Credentials credentials, List<String> trainerUsernames);
 }
