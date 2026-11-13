@@ -1,29 +1,30 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.*;
-import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.model.*;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
+import com.epam.training.gym.persistence.entity.*;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
-import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.service.validation.EntityValidator;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +35,9 @@ public class TrainingServiceImplTest {
 
     @Mock
     private TraineeService traineeService;
+
+    @Mock
+    private TraineeDao traineeDao;
 
     @Mock
     private TrainerDao trainerDao;
@@ -50,39 +54,51 @@ public class TrainingServiceImplTest {
     @InjectMocks
     private TrainingServiceImpl trainingService;
 
-    private Trainee trainee;
-    private Trainer trainer;
-    private TrainingType yogaFromDb;
+    /** What the trainee service returns after the password check. */
+    private Trainee traineeModel;
+    private TraineeEntity trainee;
+    private TrainerEntity trainer;
+    private TrainingTypeEntity yogaFromDb;
 
     @BeforeEach
     void setUp() {
         // Only objects here, no when(...): with strict stubs every stub must be used by every test
-        trainee = Trainee.builder().user(User.builder().username("John.Smith").build()).build();
-        trainer = Trainer.builder().user(User.builder().username(TRAINER_USERNAME).build()).build();
-        yogaFromDb = new TrainingType(2L, TrainingTypeName.YOGA);
+        traineeModel = Trainee.builder().user(User.builder().username("John.Smith").build()).build();
+        trainee = TraineeEntity.builder().user(UserEntity.builder().username("John.Smith").build()).build();
+        yogaFromDb = new TrainingTypeEntity(2L, TrainingTypeName.YOGA);
+        trainer = TrainerEntity.builder()
+                .user(UserEntity.builder().username(TRAINER_USERNAME).build())
+                .specialization(yogaFromDb)
+                .build();
     }
 
     @Test
     void addTraining_linksTraineeTrainerAndTypeFromDatabase() {
         stubTraineeTrainerAndType();
+        when(trainingDao.save(any(TrainingEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         Training training = newTraining();
-        when(trainingDao.save(training)).thenReturn(training);
 
         Training result = trainingService.addTraining(TRAINEE_CREDENTIALS, TRAINER_USERNAME, training);
 
-        assertSame(trainee, result.getTrainee());
-        assertSame(trainer, result.getTrainer());
-        assertSame(yogaFromDb, result.getTrainingType());
+        // The saved row refers to the rows loaded from the database
+        ArgumentCaptor<TrainingEntity> saved = ArgumentCaptor.forClass(TrainingEntity.class);
+        verify(trainingDao).save(saved.capture());
+        assertSame(trainee, saved.getValue().getTrainee());
+        assertSame(trainer, saved.getValue().getTrainer());
+        assertSame(yogaFromDb, saved.getValue().getTrainingType());
+        // The caller gets the saved training as a model
+        assertEquals("John.Smith", result.getTrainee().getUser().getUsername());
+        assertEquals(TRAINER_USERNAME, result.getTrainer().getUser().getUsername());
+        assertEquals(2L, result.getTrainingType().getId());
         verify(entityValidator).validate(training);
     }
 
     @Test
     void addTraining_trainerNotInList_isAddedToTraineesTrainers() {
         stubTraineeTrainerAndType();
-        Training training = newTraining();
-        when(trainingDao.save(training)).thenReturn(training);
+        when(trainingDao.save(any(TrainingEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        trainingService.addTraining(TRAINEE_CREDENTIALS, TRAINER_USERNAME, training);
+        trainingService.addTraining(TRAINEE_CREDENTIALS, TRAINER_USERNAME, newTraining());
 
         assertTrue(trainee.getTrainers().contains(trainer));
     }
@@ -94,13 +110,15 @@ public class TrainingServiceImplTest {
         assertThrows(AuthenticationException.class,
                 () -> trainingService.addTraining(TRAINEE_CREDENTIALS, TRAINER_USERNAME, newTraining()));
 
+        verify(traineeDao, never()).findByUsername(any());
         verify(trainerDao, never()).findByUsername(any());
         verify(trainingDao, never()).save(any());
     }
 
     @Test
     void addTraining_unknownTrainer_savesNothing() {
-        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(trainee);
+        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(traineeModel);
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee));
         when(trainerDao.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class,
@@ -111,7 +129,8 @@ public class TrainingServiceImplTest {
 
     @Test
     void addTraining_unknownTrainingType_savesNothing() {
-        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(trainee);
+        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(traineeModel);
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee));
         when(trainerDao.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
         when(trainingTypeDao.findByName(TrainingTypeName.YOGA)).thenReturn(Optional.empty());
 
@@ -135,7 +154,8 @@ public class TrainingServiceImplTest {
     }
 
     private void stubTraineeTrainerAndType() {
-        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(trainee);
+        when(traineeService.authenticate(TRAINEE_CREDENTIALS)).thenReturn(traineeModel);
+        when(traineeDao.findByUsername("John.Smith")).thenReturn(Optional.of(trainee));
         when(trainerDao.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
         when(trainingTypeDao.findByName(TrainingTypeName.YOGA)).thenReturn(Optional.of(yogaFromDb));
     }

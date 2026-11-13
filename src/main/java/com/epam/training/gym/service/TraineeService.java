@@ -1,11 +1,10 @@
 package com.epam.training.gym.service;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
-import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.model.Trainee;
+import com.epam.training.gym.model.Trainer;
+import com.epam.training.gym.model.Training;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
 
 import java.util.List;
 

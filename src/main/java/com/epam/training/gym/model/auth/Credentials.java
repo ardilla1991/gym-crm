@@ -1,4 +1,4 @@
-package com.epam.training.gym.domain.auth;
+package com.epam.training.gym.model.auth;
 
 /**
  * Username and password for authentication.

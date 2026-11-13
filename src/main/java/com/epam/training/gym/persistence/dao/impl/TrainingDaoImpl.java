@@ -1,10 +1,10 @@
 package com.epam.training.gym.persistence.dao.impl;
 
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
-import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
+import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainingDao;
+import com.epam.training.gym.persistence.entity.TrainerEntity;
+import com.epam.training.gym.persistence.entity.TrainingEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.*;
@@ -30,7 +30,7 @@ public class TrainingDaoImpl implements TrainingDao {
 
 
     @Override
-    public Training save(Training training) {
+    public TrainingEntity save(TrainingEntity training) {
         entityManager.persist(training);
         log.debug("Training saved: id={}", training.getId());
 
@@ -38,10 +38,10 @@ public class TrainingDaoImpl implements TrainingDao {
     }
 
     @Override
-    public List<Training> findTraineeTrainings(String traineeUsername, TraineeTrainingCriteria criteria) {
+    public List<TrainingEntity> findTraineeTrainings(String traineeUsername, TraineeTrainingCriteria criteria) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Training> query = cb.createQuery(Training.class);
-        Root<Training> training = query.from(Training.class);
+        CriteriaQuery<TrainingEntity> query = cb.createQuery(TrainingEntity.class);
+        Root<TrainingEntity> training = query.from(TrainingEntity.class);
         fetchLinks(training);
 
         List<Predicate> conditions = new ArrayList<>();
@@ -66,10 +66,10 @@ public class TrainingDaoImpl implements TrainingDao {
     }
 
     @Override
-    public List<Training> findTrainerTrainings(String trainerUsername, TrainerTrainingCriteria criteria) {
+    public List<TrainingEntity> findTrainerTrainings(String trainerUsername, TrainerTrainingCriteria criteria) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Training> query = cb.createQuery(Training.class);
-        Root<Training> training = query.from(Training.class);
+        CriteriaQuery<TrainingEntity> query = cb.createQuery(TrainingEntity.class);
+        Root<TrainingEntity> training = query.from(TrainingEntity.class);
         fetchLinks(training);
         List<Predicate> conditions = new ArrayList<>();
         conditions.add(cb.equal(training.get("trainer").get("user").get("username"), trainerUsername));
@@ -88,7 +88,7 @@ public class TrainingDaoImpl implements TrainingDao {
     }
 
     /** Date filters shared by both queries; both dates are inclusive. */
-    private static void addDateConditions(CriteriaBuilder cb, Root<Training> training,
+    private static void addDateConditions(CriteriaBuilder cb, Root<TrainingEntity> training,
                                           List<Predicate> conditions, LocalDate fromDate, LocalDate toDate) {
         if (fromDate != null) {
             conditions.add(cb.greaterThanOrEqualTo(training.<LocalDate>get("trainingDate"), fromDate));
@@ -102,10 +102,10 @@ public class TrainingDaoImpl implements TrainingDao {
      * Loads the trainee, the trainer and the training type in the same SQL query as the trainings.
      * Without it Hibernate loads each linked object with a separate query (the N+1 problem).
      */
-    private static void fetchLinks(Root<Training> training) {
+    private static void fetchLinks(Root<TrainingEntity> training) {
         training.fetch("trainee").fetch("user");
 
-        Fetch<Training, Trainer> trainer = training.fetch("trainer");
+        Fetch<TrainingEntity, TrainerEntity> trainer = training.fetch("trainer");
         trainer.fetch("user");
         trainer.fetch("specialization");
 

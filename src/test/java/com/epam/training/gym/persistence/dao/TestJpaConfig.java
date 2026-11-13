@@ -32,7 +32,7 @@ public class TestJpaConfig {
             throws IOException {
         LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
         factory.setDataSource(dataSource);
-        factory.setPackagesToScan("com.epam.training.gym.domain");
+        factory.setPackagesToScan("com.epam.training.gym.persistence.entity");
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         factory.setJpaProperties(PropertiesLoaderUtils.loadProperties(new ClassPathResource("jpa-test.properties")));
         return factory;

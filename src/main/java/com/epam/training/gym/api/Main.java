@@ -2,10 +2,10 @@ package com.epam.training.gym.api;
 
 import com.epam.training.gym.api.facade.GymFacade;
 import com.epam.training.gym.config.AppConfig;
-import com.epam.training.gym.domain.*;
-import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
-import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
+import com.epam.training.gym.model.*;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;

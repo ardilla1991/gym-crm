@@ -1,6 +1,6 @@
-package com.epam.training.gym.domain.criteria;
+package com.epam.training.gym.model.criteria;
 
-import com.epam.training.gym.domain.TrainingTypeName;
+import com.epam.training.gym.model.TrainingTypeName;
 import lombok.Builder;
 
 import java.time.LocalDate;

@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
@@ -30,7 +29,7 @@ public class AppConfig {
         return new PropertySourcesPlaceholderConfigurer();
     }
 
-    /** Bean Validation: checks @NotBlank, @NotNull... on entities. */
+    /** Bean Validation: checks @NotBlank, @NotNull... on models. */
     @Bean
     public LocalValidatorFactoryBean validator() {
         return new LocalValidatorFactoryBean();

@@ -1,12 +1,12 @@
 package com.epam.training.gym.persistence.dao.impl;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.TrainingType;
-import com.epam.training.gym.domain.TrainingTypeName;
+import com.epam.training.gym.model.TrainingTypeName;
 import com.epam.training.gym.persistence.dao.QueryCounter;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.persistence.entity.TraineeEntity;
+import com.epam.training.gym.persistence.entity.TrainerEntity;
+import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,16 +35,16 @@ public class TrainerDaoImplTest {
     @PersistenceContext
     private EntityManager entityManager;
 
-    private TrainingType yoga;
+    private TrainingTypeEntity yoga;
 
     @BeforeEach
     void loadTrainingType() {
-        yoga = entityManager.find(TrainingType.class, YOGA_ID);
+        yoga = entityManager.find(TrainingTypeEntity.class, YOGA_ID);
     }
 
     @Test
     void save_assignsIdsToTrainerAndUser() {
-        Trainer saved = trainerDao.save(newTrainer("Anna.Lee", yoga));
+        TrainerEntity saved = trainerDao.save(newTrainer("Anna.Lee", yoga));
 
         assertNotNull(saved.getId());
         assertNotNull(saved.getUser().getId());
@@ -55,7 +55,7 @@ public class TrainerDaoImplTest {
         trainerDao.save(newTrainer("Anna.Lee", yoga));
         flushAndClear();
 
-        Trainer found = trainerDao.findByUsername("Anna.Lee").orElseThrow();
+        TrainerEntity found = trainerDao.findByUsername("Anna.Lee").orElseThrow();
 
         assertEquals("Anna", found.getUser().getFirstName());
         assertEquals(TrainingTypeName.YOGA, found.getSpecialization().getTrainingTypeName());
@@ -73,7 +73,7 @@ public class TrainerDaoImplTest {
         trainerDao.save(newTrainer("Bob.Ross", yoga));
         flushAndClear();
 
-        List<Trainer> found = trainerDao.findByUsernames(List.of("Anna.Lee", "Bob.Ross"));
+        List<TrainerEntity> found = trainerDao.findByUsernames(List.of("Anna.Lee", "Bob.Ross"));
 
         Set<String> usernames = found.stream()
                 .map(trainer -> trainer.getUser().getUsername())
@@ -88,15 +88,15 @@ public class TrainerDaoImplTest {
 
     @Test
     void findNotAssignedToTrainee_returnsTrainersMissingFromTraineesList() {
-        Trainer anna = trainerDao.save(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
+        TrainerEntity anna = trainerDao.save(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
         trainerDao.save(newTrainer("Mark", "Hill", "Mark.Hill", yoga));
         trainerDao.save(newTrainer("Bob", "Ross", "Bob.Ross", yoga));
-        Trainee john = newTrainee("John.Smith");
+        TraineeEntity john = newTrainee("John.Smith");
         john.getTrainers().add(anna);
         entityManager.persist(john);
         flushAndClear();
 
-        List<Trainer> found = trainerDao.findNotAssignedToTrainee("John.Smith");
+        List<TrainerEntity> found = trainerDao.findNotAssignedToTrainee("John.Smith");
 
         assertEquals(Set.of("Mark.Hill", "Bob.Ross"), usernames(found));
     }
@@ -108,21 +108,21 @@ public class TrainerDaoImplTest {
         entityManager.persist(newTrainee("John.Smith"));
         flushAndClear();
 
-        List<Trainer> found = trainerDao.findNotAssignedToTrainee("John.Smith");
+        List<TrainerEntity> found = trainerDao.findNotAssignedToTrainee("John.Smith");
 
         assertEquals(Set.of("Anna.Lee", "Mark.Hill"), usernames(found));
     }
 
     @Test
     void findByUsernameWithTrainees_loadsTraineesInSameQuery() {
-        Trainer anna = trainerDao.save(newTrainer("Anna.Lee", yoga));
-        Trainee john = newTrainee("John.Smith");
+        TrainerEntity anna = trainerDao.save(newTrainer("Anna.Lee", yoga));
+        TraineeEntity john = newTrainee("John.Smith");
         john.getTrainers().add(anna);
         entityManager.persist(john);
         flushAndClear();
         QueryCounter queries = new QueryCounter(entityManager);
 
-        Trainer found = trainerDao.findByUsernameWithTrainees("Anna.Lee").orElseThrow();
+        TrainerEntity found = trainerDao.findByUsernameWithTrainees("Anna.Lee").orElseThrow();
         found.getTrainees().forEach(trainee -> trainee.getUser().getUsername());
 
         assertEquals(1, found.getTrainees().size());
@@ -142,7 +142,7 @@ public class TrainerDaoImplTest {
         entityManager.clear();
     }
 
-    private static Set<String> usernames(List<Trainer> trainers) {
+    private static Set<String> usernames(List<TrainerEntity> trainers) {
         return trainers.stream()
                 .map(trainer -> trainer.getUser().getUsername())
                 .collect(Collectors.toSet());

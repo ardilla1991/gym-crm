@@ -1,4 +1,4 @@
-package com.epam.training.gym.domain.criteria;
+package com.epam.training.gym.model.criteria;
 
 import lombok.Builder;
 

@@ -1,12 +1,7 @@
 package com.epam.training.gym.service.generator;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.User;
-import com.epam.training.gym.persistence.dao.TraineeDao;
-import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.model.User;
 import com.epam.training.gym.persistence.dao.UserDao;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

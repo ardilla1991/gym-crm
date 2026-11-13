@@ -1,8 +1,8 @@
 package com.epam.training.gym.service.auth;
 
-import com.epam.training.gym.domain.User;
-import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.persistence.dao.UserDao;
+import com.epam.training.gym.persistence.entity.UserEntity;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,7 +50,7 @@ public class UserAuthenticatorTest {
                 () -> userAuthenticator.authenticate(new Credentials("User.Name", CURRENT_PASSWORD)));
     }
 
-    private static User existingUser() {
-        return User.builder().username(USERNAME).password(CURRENT_PASSWORD).build();
+    private static UserEntity existingUser() {
+        return UserEntity.builder().username(USERNAME).password(CURRENT_PASSWORD).build();
     }
 }

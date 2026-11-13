@@ -1,33 +1,31 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.TrainingType;
-import com.epam.training.gym.domain.TrainingTypeName;
-import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
+import com.epam.training.gym.model.Trainer;
+import com.epam.training.gym.model.Training;
+import com.epam.training.gym.model.TrainingTypeName;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
+import com.epam.training.gym.persistence.entity.TrainerEntity;
+import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
+import com.epam.training.gym.service.mapper.TrainerEntityMapper;
+import com.epam.training.gym.service.mapper.TrainingEntityMapper;
 import com.epam.training.gym.service.validation.EntityValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @Service
-public class TrainerServiceImpl extends AbstractProfileService<Trainer>
+public class TrainerServiceImpl extends AbstractProfileService<Trainer, TrainerEntity>
         implements TrainerService {
-
-    private static final Logger log = LoggerFactory.getLogger(TrainerServiceImpl.class);
 
     private TrainerDao trainerDao;
     private TrainingDao trainingDao;
@@ -65,25 +63,36 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     }
 
     @Override
-    protected Optional<Trainer> findByUsername(String username) {
+    protected Optional<TrainerEntity> findByUsername(String username) {
         return trainerDao.findByUsername(username);
     }
 
     @Override
-    protected Optional<Trainer> findProfileByUsername(String username) {
+    protected Optional<TrainerEntity> findProfileByUsername(String username) {
         return trainerDao.findByUsernameWithTrainees(username);
+    }
+
+    @Override
+    protected Trainer toModel(TrainerEntity entity) {
+        return TrainerEntityMapper.toModel(entity);
+    }
+
+    @Override
+    protected Trainer toProfileModel(TrainerEntity entity) {
+        return TrainerEntityMapper.toModelWithTrainees(entity);
     }
 
     @Override
     @Transactional
     public Trainer create(Trainer trainer) {
         entityValidator.validate(trainer);
-        trainer.setSpecialization(findTrainingType(trainer.getSpecialization().getTrainingTypeName()));
+        // Only the name of the specialization comes from the caller: the type itself is loaded from the database
+        TrainingTypeEntity specialization = findTrainingType(trainer.getSpecialization().getTrainingTypeName());
         newUserDataGenerator.fillNewUserData(trainer.getUser());
-        Trainer saved = trainerDao.save(trainer);
+        TrainerEntity saved = trainerDao.save(TrainerEntityMapper.toNewEntity(trainer, specialization));
         log.info("Trainer created: id={}, username={}", saved.getId(), saved.getUser().getUsername());
 
-        return saved;
+        return TrainerEntityMapper.toModel(saved);
     }
 
     @Override
@@ -91,28 +100,30 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     public Trainer update(Credentials credentials, Trainer newData) {
         // Only the user part is validated: the specialization is not changed, so it may be missing here
         entityValidator.validate(newData.getUser());
-        Trainer trainer = authenticate(credentials);
+        TrainerEntity trainer = authenticateEntity(credentials);
 
+        // The entity is managed: Hibernate writes the changes at commit (dirty checking)
         trainer.getUser().setFirstName(newData.getUser().getFirstName());
         trainer.getUser().setLastName(newData.getUser().getLastName());
-
         log.info("Trainer profile updated: username={}", credentials.username());
 
-        return trainer;
+        return TrainerEntityMapper.toModel(trainer);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Training> getTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
-        authenticate(credentials);
+        authenticateEntity(credentials);
         TrainerTrainingCriteria filters = criteria != null ? criteria : TrainerTrainingCriteria.builder().build();
-        List<Training> trainings = trainingDao.findTrainerTrainings(credentials.username(), filters);
+        List<Training> trainings = trainingDao.findTrainerTrainings(credentials.username(), filters).stream()
+                .map(TrainingEntityMapper::toModel)
+                .toList();
         log.info("Trainer trainings found: username={}, count={}", credentials.username(), trainings.size());
 
         return trainings;
     }
 
-    private TrainingType findTrainingType(TrainingTypeName name) {
+    private TrainingTypeEntity findTrainingType(TrainingTypeName name) {
         return trainingTypeDao.findByName(name)
                 .orElseThrow(() -> new EntityNotFoundException("Training type", name));
     }

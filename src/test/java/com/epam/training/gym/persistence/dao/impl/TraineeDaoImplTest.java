@@ -1,9 +1,9 @@
 package com.epam.training.gym.persistence.dao.impl;
 
-import com.epam.training.gym.domain.*;
 import com.epam.training.gym.persistence.dao.QueryCounter;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.TraineeDao;
+import com.epam.training.gym.persistence.entity.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,7 @@ public class TraineeDaoImplTest {
 
     @Test
     void save_assignsIdsToTraineeAndUser() {
-        Trainee saved = traineeDao.save(newTrainee("John.Smith"));
+        TraineeEntity saved = traineeDao.save(newTrainee("John.Smith"));
 
         assertNotNull(saved.getId());
         assertNotNull(saved.getUser().getId());
@@ -42,7 +42,7 @@ public class TraineeDaoImplTest {
         traineeDao.save(newTrainee("John.Smith"));
         flushAndClear();
 
-        Trainee found = traineeDao.findByUsername("John.Smith").orElseThrow();
+        TraineeEntity found = traineeDao.findByUsername("John.Smith").orElseThrow();
 
         assertEquals("John", found.getUser().getFirstName());
         assertEquals(LocalDate.of(1990, 1, 15), found.getDateOfBirth());
@@ -55,32 +55,32 @@ public class TraineeDaoImplTest {
 
     @Test
     void delete_alsoDeletesUserAndTrainings() {
-        Trainee trainee = traineeDao.save(newTrainee("John.Smith"));
+        TraineeEntity trainee = traineeDao.save(newTrainee("John.Smith"));
         Long userId = trainee.getUser().getId();
         Long trainingId = saveTrainingFor(trainee).getId();
         flushAndClear();
 
-        Trainee loaded = traineeDao.findByUsername("John.Smith").orElseThrow();
+        TraineeEntity loaded = traineeDao.findByUsername("John.Smith").orElseThrow();
         traineeDao.delete(loaded);
         flushAndClear();
 
         assertTrue(traineeDao.findByUsername("John.Smith").isEmpty());
-        assertNull(entityManager.find(User.class, userId));
-        assertNull(entityManager.find(Training.class, trainingId));
+        assertNull(entityManager.find(UserEntity.class, userId));
+        assertNull(entityManager.find(TrainingEntity.class, trainingId));
     }
 
     @Test
     void findByUsernameWithTrainers_loadsTrainersInSameQuery() {
-        TrainingType yoga = entityManager.find(TrainingType.class, YOGA_ID);
-        Trainer anna = newTrainer("Anna.Lee", yoga);
+        TrainingTypeEntity yoga = entityManager.find(TrainingTypeEntity.class, YOGA_ID);
+        TrainerEntity anna = newTrainer("Anna.Lee", yoga);
         entityManager.persist(anna);
-        Trainee trainee = newTrainee("John.Smith");
+        TraineeEntity trainee = newTrainee("John.Smith");
         trainee.getTrainers().add(anna);
         traineeDao.save(trainee);
         flushAndClear();
         QueryCounter queries = new QueryCounter(entityManager);
 
-        Trainee found = traineeDao.findByUsernameWithTrainers("John.Smith").orElseThrow();
+        TraineeEntity found = traineeDao.findByUsernameWithTrainers("John.Smith").orElseThrow();
         found.getTrainers().forEach(trainer -> trainer.getUser().getUsername());
 
         assertEquals(1, found.getTrainers().size());
@@ -92,7 +92,7 @@ public class TraineeDaoImplTest {
         traineeDao.save(newTrainee("John.Smith"));
         flushAndClear();
 
-        Trainee found = traineeDao.findByUsernameWithTrainers("John.Smith").orElseThrow();
+        TraineeEntity found = traineeDao.findByUsernameWithTrainers("John.Smith").orElseThrow();
 
         assertTrue(found.getTrainers().isEmpty());
     }
@@ -103,15 +103,15 @@ public class TraineeDaoImplTest {
         entityManager.clear();
     }
 
-    private Training saveTrainingFor(Trainee trainee) {
-        TrainingType yoga = entityManager.find(TrainingType.class, YOGA_ID);
-        Trainer trainer = Trainer.builder()
+    private TrainingEntity saveTrainingFor(TraineeEntity trainee) {
+        TrainingTypeEntity yoga = entityManager.find(TrainingTypeEntity.class, YOGA_ID);
+        TrainerEntity trainer = TrainerEntity.builder()
                 .specialization(yoga)
                 .user(newUser("Anna", "Lee", "Anna.Lee"))
                 .build();
         entityManager.persist(trainer);
 
-        Training training = Training.builder()
+        TrainingEntity training = TrainingEntity.builder()
                 .trainee(trainee)
                 .trainer(trainer)
                 .trainingName("Morning yoga")

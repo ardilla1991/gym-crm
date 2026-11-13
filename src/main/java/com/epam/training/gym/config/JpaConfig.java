@@ -27,7 +27,7 @@ import java.io.IOException;
 @EnableTransactionManagement
 @PropertySource("classpath:db-${db:h2}.properties")
 public class JpaConfig {
-    private static final String ENTITY_PACKAGE = "com.epam.training.gym.domain";
+    private static final String ENTITY_PACKAGE = "com.epam.training.gym.persistence.entity";
 
     /** Connection pool: keeps several open connections and reuses them. */
     @Bean

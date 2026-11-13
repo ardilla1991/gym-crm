@@ -1,8 +1,8 @@
 package com.epam.training.gym.persistence.dao.impl;
 
-import com.epam.training.gym.domain.User;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.UserDao;
+import com.epam.training.gym.persistence.entity.UserEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ public class UserDaoImplTest {
         entityManager.flush();
         entityManager.clear();
 
-        User found = userDao.findByUsername("John.Smith").orElseThrow();
+        UserEntity found = userDao.findByUsername("John.Smith").orElseThrow();
 
         assertEquals("John", found.getFirstName());
     }

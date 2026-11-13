@@ -1,10 +1,7 @@
-package com.epam.training.gym.domain;
+package com.epam.training.gym.persistence.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -13,9 +10,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Trainee profile (table "trainee"). Name, username, password and status are in {@link User}.
+ * Database row of a trainee (table "trainee"). Name, username, password and status are in {@link UserEntity}.
  */
-@Entity
+@Entity(name = "Trainee")
 @Table(name = "trainee")
 @Getter
 @Setter
@@ -23,15 +20,15 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @ToString
-public class Trainee implements UserProfile {
+public class TraineeEntity implements ProfileEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /** Personal data: excluded from toString() so it does not end up in logs. */
-    @Column(name = "date_of_birth")
     @ToString.Exclude
+    @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
     /** Personal data: excluded from toString() so it does not end up in logs. */
@@ -40,11 +37,9 @@ public class Trainee implements UserProfile {
     private String address;
 
     /** Saved and deleted together with the trainee. */
-    @NotNull
-    @Valid
     @OneToOne(cascade = CascadeType.ALL, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
+    private UserEntity user;
 
     /** Owning side of the many-to-many relation: rows of trainee_trainer are managed from here. */
     @ToString.Exclude
@@ -54,11 +49,11 @@ public class Trainee implements UserProfile {
             joinColumns = @JoinColumn(name = "trainee_id"),
             inverseJoinColumns = @JoinColumn(name = "trainer_id"),
             indexes = @Index(name = "idx_trainee_trainer_trainer", columnList = "trainer_id"))
-    private Set<Trainer> trainers = new HashSet<>();
+    private Set<TrainerEntity> trainers = new HashSet<>();
 
     /** Deleting a trainee also deletes the trainee's trainings. */
     @ToString.Exclude
     @Builder.Default
     @OneToMany(mappedBy = "trainee", cascade = CascadeType.REMOVE)
-    private List<Training> trainings = new ArrayList<>();
+    private List<TrainingEntity> trainings = new ArrayList<>();
 }

@@ -1,16 +1,23 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.TrainingTypeName;
-import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.model.Training;
+import com.epam.training.gym.model.TrainingTypeName;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
+import com.epam.training.gym.persistence.entity.TraineeEntity;
+import com.epam.training.gym.persistence.entity.TrainerEntity;
+import com.epam.training.gym.persistence.entity.TrainingEntity;
+import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainingService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.mapper.TraineeEntityMapper;
+import com.epam.training.gym.service.mapper.TrainerEntityMapper;
+import com.epam.training.gym.service.mapper.TrainingEntityMapper;
+import com.epam.training.gym.service.mapper.TrainingTypeEntityMapper;
 import com.epam.training.gym.service.validation.EntityValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +25,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 public class TrainingServiceImpl implements TrainingService {
 
     private static final Logger log = LoggerFactory.getLogger(TrainingServiceImpl.class);
 
     private TraineeService traineeService;
+    private TraineeDao traineeDao;
     private TrainerDao trainerDao;
     private TrainingDao trainingDao;
     private TrainingTypeDao trainingTypeDao;
@@ -34,6 +40,11 @@ public class TrainingServiceImpl implements TrainingService {
     @Autowired
     public void setTraineeService(TraineeService traineeService) {
         this.traineeService = traineeService;
+    }
+
+    @Autowired
+    public void setTraineeDao(TraineeDao traineeDao) {
+        this.traineeDao = traineeDao;
     }
 
     @Autowired
@@ -57,36 +68,36 @@ public class TrainingServiceImpl implements TrainingService {
     }
 
     @Override
-    public Training create(Training training) {
-        Training saved = trainingDao.save(training);
-        log.info("Training created: id={}, name={}", saved.getId(), saved.getTrainingName());
-
-        return saved;
-    }
-
-    @Override
     @Transactional
     public Training addTraining(Credentials traineeCredentials, String trainerUsername, Training training) {
-        Trainee trainee = traineeService.authenticate(traineeCredentials);
-        Trainer trainer = trainerDao.findByUsername(trainerUsername)
+        // The password check stays in one place: the trainee service
+        traineeService.authenticate(traineeCredentials);
+        // The trainee exists (just authenticated); its row is needed to link the training to it
+        TraineeEntity trainee = traineeDao.findByUsername(traineeCredentials.username()).orElseThrow();
+        TrainerEntity trainer = trainerDao.findByUsername(trainerUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer", trainerUsername));
+        TrainingTypeEntity trainingType = training.getTrainingType() != null
+                ? findTrainingType(training.getTrainingType().getTrainingTypeName())
+                : null;
 
-        training.setTrainee(trainee);
-        training.setTrainer(trainer);
-        if (training.getTrainingType() != null) {
-            TrainingTypeName typeName = training.getTrainingType().getTrainingTypeName();
-            training.setTrainingType(trainingTypeDao.findByName(typeName)
-                    .orElseThrow(() -> new EntityNotFoundException("Training type", typeName)));
-        }
+        // The model is validated complete: with the trainee, the trainer and the type found above
+        training.setTrainee(TraineeEntityMapper.toModel(trainee));
+        training.setTrainer(TrainerEntityMapper.toModel(trainer));
+        training.setTrainingType(trainingType != null ? TrainingTypeEntityMapper.toModel(trainingType) : null);
         entityValidator.validate(training);
 
         // A trainee who trains with a trainer has this trainer in the list
         trainee.getTrainers().add(trainer);
-
-        Training saved = trainingDao.save(training);
+        TrainingEntity saved = trainingDao.save(
+                TrainingEntityMapper.toNewEntity(training, trainee, trainer, trainingType));
         log.info("Training added: id={}, trainee={}, trainer={}",
                 saved.getId(), traineeCredentials.username(), trainerUsername);
 
-        return saved;
+        return TrainingEntityMapper.toModel(saved);
+    }
+
+    private TrainingTypeEntity findTrainingType(TrainingTypeName name) {
+        return trainingTypeDao.findByName(name)
+                .orElseThrow(() -> new EntityNotFoundException("Training type", name));
     }
 }

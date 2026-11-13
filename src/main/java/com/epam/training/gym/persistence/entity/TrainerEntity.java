@@ -1,18 +1,15 @@
-package com.epam.training.gym.domain;
+package com.epam.training.gym.persistence.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Trainer profile (table "trainer"). Name, username, password and status are in {@link User}.
+ * Database row of a trainer (table "trainer"). Name, username, password and status are in {@link UserEntity}.
  */
-@Entity
+@Entity(name = "Trainer")
 @Table(name = "trainer")
 @Getter
 @Setter
@@ -20,27 +17,24 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @ToString
-public class Trainer implements UserProfile {
+public class TrainerEntity implements ProfileEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
     @ManyToOne(optional = false)
     @JoinColumn(name = "specialization_id", nullable = false)
-    private TrainingType specialization;
+    private TrainingTypeEntity specialization;
 
     /** Saved together with the trainer. */
-    @NotNull
-    @Valid
     @OneToOne(cascade = CascadeType.ALL, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
+    private UserEntity user;
 
-    /** Inverse side of Trainee.trainers: read-only view, changes are made through the trainee. */
+    /** Inverse side of TraineeEntity.trainers: read-only view, changes are made through the trainee. */
     @ToString.Exclude
     @Builder.Default
     @ManyToMany(mappedBy = "trainers")
-    private Set<Trainee> trainees = new HashSet<>();
+    private Set<TraineeEntity> trainees = new HashSet<>();
 }

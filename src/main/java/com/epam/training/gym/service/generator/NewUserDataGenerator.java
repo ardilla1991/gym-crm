@@ -1,16 +1,12 @@
 package com.epam.training.gym.service.generator;
 
-import com.epam.training.gym.domain.User;
-import com.epam.training.gym.persistence.dao.TraineeDao;
-import com.epam.training.gym.persistence.dao.TrainerDao;
+import com.epam.training.gym.model.User;
 import com.epam.training.gym.persistence.dao.UserDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**

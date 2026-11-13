@@ -1,24 +1,26 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.*;
-import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
+import com.epam.training.gym.model.*;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
+import com.epam.training.gym.persistence.entity.*;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
 import jakarta.validation.ConstraintViolationException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -61,14 +63,18 @@ public class TrainerServiceImplTest {
 
     @Test
     void create_usesTrainingTypeFromDatabase() {
-        TrainingType zumbaFromDb = new TrainingType(3L, TrainingTypeName.ZUMBA);
+        TrainingTypeEntity zumbaFromDb = new TrainingTypeEntity(3L, TrainingTypeName.ZUMBA);
         Trainer trainer = newTrainer(TrainingTypeName.ZUMBA);
         when(trainingTypeDao.findByName(TrainingTypeName.ZUMBA)).thenReturn(Optional.of(zumbaFromDb));
-        when(trainerDao.save(trainer)).thenReturn(trainer);
+        when(trainerDao.save(any(TrainerEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Trainer result = trainerService.create(trainer);
 
-        assertSame(zumbaFromDb, result.getSpecialization());
+        // The saved row refers to the type loaded from the database, not to a new one
+        ArgumentCaptor<TrainerEntity> saved = ArgumentCaptor.forClass(TrainerEntity.class);
+        verify(trainerDao).save(saved.capture());
+        assertSame(zumbaFromDb, saved.getValue().getSpecialization());
+        assertEquals(3L, result.getSpecialization().getId());
         verify(entityValidator).validate(trainer);
         verify(newUserDataGenerator).fillNewUserData(trainer.getUser());
     }
@@ -110,7 +116,7 @@ public class TrainerServiceImplTest {
 
     @Test
     void changePassword_rightCredentials_setsNewPassword() {
-        Trainer trainer = existingTrainer(true);
+        TrainerEntity trainer = existingTrainer(true);
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
         trainerService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD);
@@ -120,7 +126,7 @@ public class TrainerServiceImplTest {
 
     @Test
     void changePassword_wrongPassword_throwsAndKeepsOldPassword() {
-        Trainer trainer = existingTrainer(true);
+        TrainerEntity trainer = existingTrainer(true);
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
         assertThrows(AuthenticationException.class,
@@ -141,7 +147,7 @@ public class TrainerServiceImplTest {
 
     @Test
     void toggleActive_activeTrainer_becomesInactive() {
-        Trainer trainer = existingTrainer(true);
+        TrainerEntity trainer = existingTrainer(true);
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
         assertFalse(trainerService.toggleActive(VALID_CREDENTIALS));
@@ -150,7 +156,7 @@ public class TrainerServiceImplTest {
 
     @Test
     void toggleActive_calledTwice_returnsToOriginalStatus() {
-        Trainer trainer = existingTrainer(false);
+        TrainerEntity trainer = existingTrainer(false);
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
         assertTrue(trainerService.toggleActive(VALID_CREDENTIALS));     // inactive -> active
@@ -159,7 +165,7 @@ public class TrainerServiceImplTest {
 
     @Test
     void toggleActive_wrongPassword_throwsAndKeepsStatus() {
-        Trainer trainer = existingTrainer(true);
+        TrainerEntity trainer = existingTrainer(true);
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
         assertThrows(AuthenticationException.class,
@@ -170,12 +176,12 @@ public class TrainerServiceImplTest {
 
     // ---------- helpers ----------
 
-    /** A trainer as if loaded from the database: with username and password. */
-    private static Trainer existingTrainer(boolean active) {
-        return Trainer.builder()
+    /** A trainer row as if loaded from the database: with username and password. */
+    private static TrainerEntity existingTrainer(boolean active) {
+        return TrainerEntity.builder()
                 .id(1L)
-                .specialization(new TrainingType(2L, TrainingTypeName.YOGA))
-                .user(User.builder()
+                .specialization(new TrainingTypeEntity(2L, TrainingTypeName.YOGA))
+                .user(UserEntity.builder()
                         .id(1L)
                         .firstName("Anna")
                         .lastName("Lee")
@@ -186,7 +192,7 @@ public class TrainerServiceImplTest {
                 .build();
     }
 
-    /** The specialization is built by hand, without id: like a caller would pass it. */
+    /** A trainer as a caller passes it: the specialization is built by hand, without id. */
     private static Trainer newTrainer(TrainingTypeName specialization) {
         return Trainer.builder()
                 .specialization(new TrainingType(null, specialization))
@@ -198,33 +204,35 @@ public class TrainerServiceImplTest {
 
     @Test
     void getProfile_signedInUser_readsTrainerProfile() {
-        Trainer trainer = existingTrainer(true);
         Credentials traineeCredentials = new Credentials("John.Smith", "abcdef1234");
-        when(trainerDao.findByUsernameWithTrainees(USERNAME)).thenReturn(Optional.of(trainer));
+        when(trainerDao.findByUsernameWithTrainees(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
 
         // A trainee reads a trainer's profile: any signed-in user may do it
-        assertSame(trainer, trainerService.getProfile(traineeCredentials, USERNAME));
+        Trainer result = trainerService.getProfile(traineeCredentials, USERNAME);
+
+        assertEquals(USERNAME, result.getUser().getUsername());
         verify(userAuthenticator).authenticate(traineeCredentials);
     }
 
-// ---------- update ----------
+    // ---------- update ----------
 
     @Test
     void update_changesNamesAndKeepsSpecialization() {
-        Trainer trainer = existingTrainer(true);
-        TrainingType specialization = trainer.getSpecialization();
+        TrainerEntity trainer = existingTrainer(true);
+        TrainingTypeEntity specialization = trainer.getSpecialization();
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
         Trainer newData = Trainer.builder()
                 .specialization(new TrainingType(1L, TrainingTypeName.FITNESS))   // must be ignored
                 .user(User.builder().firstName("Annie").lastName("Leigh").build())
                 .build();
 
-        trainerService.update(VALID_CREDENTIALS, newData);
+        Trainer result = trainerService.update(VALID_CREDENTIALS, newData);
 
         assertEquals("Annie", trainer.getUser().getFirstName());
         assertEquals("Leigh", trainer.getUser().getLastName());
         assertSame(specialization, trainer.getSpecialization());
         assertEquals(USERNAME, trainer.getUser().getUsername());
+        assertEquals("Annie", result.getUser().getFirstName());
     }
 
     @Test
@@ -237,16 +245,18 @@ public class TrainerServiceImplTest {
         verify(trainerDao, never()).findByUsername(any());
     }
 
-// ---------- getTrainings ----------
+    // ---------- getTrainings ----------
 
     @Test
     void getTrainings_passesUsernameAndCriteriaToDao() {
-        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
+        TrainerEntity trainer = existingTrainer(true);
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
         TrainerTrainingCriteria criteria = TrainerTrainingCriteria.builder().traineeName("John").build();
-        List<Training> trainings = List.of(new Training());
-        when(trainingDao.findTrainerTrainings(USERNAME, criteria)).thenReturn(trainings);
+        when(trainingDao.findTrainerTrainings(USERNAME, criteria)).thenReturn(List.of(trainingRow(trainer)));
 
-        assertSame(trainings, trainerService.getTrainings(VALID_CREDENTIALS, criteria));
+        List<Training> result = trainerService.getTrainings(VALID_CREDENTIALS, criteria);
+
+        assertEquals(List.of("Morning yoga"), result.stream().map(Training::getTrainingName).toList());
     }
 
     @Test
@@ -256,6 +266,18 @@ public class TrainerServiceImplTest {
                 .thenReturn(List.of());
 
         assertTrue(trainerService.getTrainings(VALID_CREDENTIALS, null).isEmpty());
+    }
+
+    /** A complete training row of the trainer, as the DAO loads it with all its links. */
+    private static TrainingEntity trainingRow(TrainerEntity trainer) {
+        return TrainingEntity.builder()
+                .trainingName("Morning yoga")
+                .trainee(TraineeEntity.builder().user(UserEntity.builder().username("John.Smith").build()).build())
+                .trainer(trainer)
+                .trainingType(trainer.getSpecialization())
+                .trainingDate(LocalDate.of(2026, 10, 5))
+                .trainingDuration(60)
+                .build();
     }
 
 }

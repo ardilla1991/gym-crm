@@ -1,7 +1,7 @@
 package com.epam.training.gym.persistence.dao.impl;
 
-import com.epam.training.gym.domain.User;
 import com.epam.training.gym.persistence.dao.UserDao;
+import com.epam.training.gym.persistence.entity.UserEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
@@ -28,9 +28,9 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
-    public Optional<User> findByUsername(String username) {
+    public Optional<UserEntity> findByUsername(String username) {
         return entityManager
-                .createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
+                .createQuery("SELECT u FROM User u WHERE u.username = :username", UserEntity.class)
                 .setParameter("username", username)
                 .getResultStream()
                 .findFirst();

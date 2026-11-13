@@ -1,6 +1,6 @@
 package com.epam.training.gym.service.auth;
 
-import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import org.slf4j.Logger;

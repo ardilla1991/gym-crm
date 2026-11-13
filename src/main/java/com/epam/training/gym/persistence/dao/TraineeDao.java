@@ -1,19 +1,18 @@
 package com.epam.training.gym.persistence.dao;
 
-import com.epam.training.gym.domain.Trainee;
+import com.epam.training.gym.persistence.entity.TraineeEntity;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface TraineeDao {
 
-    Trainee save(Trainee trainee);
+    TraineeEntity save(TraineeEntity trainee);
 
-    Optional<Trainee> findByUsername(String username);
+    Optional<TraineeEntity> findByUsername(String username);
 
     /** Hard delete: the trainee's user, trainings and trainer assignments are deleted too. */
-    void delete(Trainee trainee);
+    void delete(TraineeEntity trainee);
 
     /** Like findByUsername, but also loads the trainee's trainers: for returning the profile. */
-    Optional<Trainee> findByUsernameWithTrainers(String username);
+    Optional<TraineeEntity> findByUsernameWithTrainers(String username);
 }

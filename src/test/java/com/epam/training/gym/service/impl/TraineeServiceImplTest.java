@@ -1,14 +1,12 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.User;
-import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.model.*;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingDao;
+import com.epam.training.gym.persistence.entity.*;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
@@ -43,6 +41,8 @@ public class TraineeServiceImplTest {
     private static final Credentials VALID_CREDENTIALS = new Credentials(USERNAME, CURRENT_PASSWORD);
     private static final Credentials WRONG_PASSWORD_CREDENTIALS = new Credentials(USERNAME, "wrong");
 
+    private static final TrainingTypeEntity YOGA = new TrainingTypeEntity(2L, TrainingTypeName.YOGA);
+
     @Mock
     private TraineeDao traineeDao;
 
@@ -67,15 +67,21 @@ public class TraineeServiceImplTest {
     @Test
     void create_validatesThenGeneratesThenSaves() {
         Trainee trainee = newTrainee();
-        when(traineeDao.save(trainee)).thenReturn(trainee);
+        when(traineeDao.save(any(TraineeEntity.class))).thenAnswer(invocation -> {
+            TraineeEntity entity = invocation.getArgument(0);
+            entity.setId(1L);                       // as the database would do
+            return entity;
+        });
 
         Trainee result = traineeService.create(trainee);
 
-        assertSame(trainee, result);
+        // The caller gets a model built from the saved entity
+        assertEquals(1L, result.getId());
+        assertEquals("John", result.getUser().getFirstName());
         InOrder order = inOrder(entityValidator, newUserDataGenerator, traineeDao);
         order.verify(entityValidator).validate(trainee);
         order.verify(newUserDataGenerator).fillNewUserData(trainee.getUser());
-        order.verify(traineeDao).save(trainee);
+        order.verify(traineeDao).save(any(TraineeEntity.class));
     }
 
     @Test
@@ -89,6 +95,7 @@ public class TraineeServiceImplTest {
         verify(traineeDao, never()).save(any());
     }
 
+    /** A trainee as a caller passes it: a model without id, username and password. */
     private static Trainee newTrainee() {
         return Trainee.builder()
                 .user(User.builder().firstName("John").lastName("Smith").build())
@@ -118,21 +125,21 @@ public class TraineeServiceImplTest {
         assertFalse(traineeService.matchCredentials(new Credentials("User.Name", CURRENT_PASSWORD)));
     }
 
-// ---------- changePassword ----------
+    // ---------- changePassword ----------
 
     @Test
     void changePassword_rightCredentials_setsNewPassword() {
-        Trainee trainee = existingTrainee(true);
+        TraineeEntity trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
-        traineeService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD );
+        traineeService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD);
 
         assertEquals(NEW_PASSWORD, trainee.getUser().getPassword());
     }
 
     @Test
     void changePassword_wrongPassword_throwsAndKeepsOldPassword() {
-        Trainee trainee = existingTrainee(true);
+        TraineeEntity trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
         assertThrows(AuthenticationException.class,
@@ -150,11 +157,11 @@ public class TraineeServiceImplTest {
         verify(traineeDao, never()).findByUsername(any());
     }
 
-// ---------- toggleActive ----------
+    // ---------- toggleActive ----------
 
     @Test
     void toggleActive_activeTrainee_becomesInactive() {
-        Trainee trainee = existingTrainee(true);
+        TraineeEntity trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
         assertFalse(traineeService.toggleActive(VALID_CREDENTIALS));
@@ -163,7 +170,7 @@ public class TraineeServiceImplTest {
 
     @Test
     void toggleActive_calledTwice_returnsToOriginalStatus() {
-        Trainee trainee = existingTrainee(false);
+        TraineeEntity trainee = existingTrainee(false);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
         assertTrue(traineeService.toggleActive(VALID_CREDENTIALS));      // inactive -> active
@@ -172,7 +179,7 @@ public class TraineeServiceImplTest {
 
     @Test
     void toggleActive_wrongPassword_throwsAndKeepsStatus() {
-        Trainee trainee = existingTrainee(true);
+        TraineeEntity trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
         assertThrows(AuthenticationException.class, () -> traineeService.toggleActive(WRONG_PASSWORD_CREDENTIALS));
@@ -180,11 +187,11 @@ public class TraineeServiceImplTest {
         assertTrue(trainee.getUser().isActive());
     }
 
-    /** A trainee as if loaded from the database: with username and password. */
-    private static Trainee existingTrainee(boolean active) {
-        return Trainee.builder()
+    /** A trainee row as if loaded from the database: with username and password. */
+    private static TraineeEntity existingTrainee(boolean active) {
+        return TraineeEntity.builder()
                 .id(1L)
-                .user(User.builder()
+                .user(UserEntity.builder()
                         .id(1L)
                         .firstName("John")
                         .lastName("Smith")
@@ -195,16 +202,16 @@ public class TraineeServiceImplTest {
                 .build();
     }
 
-// ---------- getProfile ----------
+    // ---------- getProfile ----------
 
     @Test
     void getProfile_signedInUser_readsAnotherTraineesProfile() {
-        Trainee mary = traineeWithUsername("Mary.Jones");
-        when(traineeDao.findByUsernameWithTrainers("Mary.Jones")).thenReturn(Optional.of(mary));
+        when(traineeDao.findByUsernameWithTrainers("Mary.Jones"))
+                .thenReturn(Optional.of(traineeWithUsername("Mary.Jones")));
 
         Trainee result = traineeService.getProfile(VALID_CREDENTIALS, "Mary.Jones");
 
-        assertSame(mary, result);
+        assertEquals("Mary.Jones", result.getUser().getUsername());
         verify(userAuthenticator).authenticate(VALID_CREDENTIALS);
     }
 
@@ -226,11 +233,11 @@ public class TraineeServiceImplTest {
         verify(traineeDao, never()).findByUsernameWithTrainers(any());
     }
 
-// ---------- update ----------
+    // ---------- update ----------
 
     @Test
     void update_changesOnlyAllowedFields() {
-        Trainee trainee = existingTrainee(true);
+        TraineeEntity trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
         Trainee newData = Trainee.builder()
                 .dateOfBirth(LocalDate.of(2000, 5, 5))
@@ -246,7 +253,7 @@ public class TraineeServiceImplTest {
 
         Trainee result = traineeService.update(VALID_CREDENTIALS, newData);
 
-        assertSame(trainee, result);
+        // The managed entity got only the allowed fields
         assertEquals("Johnny", trainee.getUser().getFirstName());
         assertEquals("Smithers", trainee.getUser().getLastName());
         assertEquals(LocalDate.of(2000, 5, 5), trainee.getDateOfBirth());
@@ -254,6 +261,9 @@ public class TraineeServiceImplTest {
         assertEquals(USERNAME, trainee.getUser().getUsername());
         assertEquals(CURRENT_PASSWORD, trainee.getUser().getPassword());
         assertTrue(trainee.getUser().isActive());
+        // The caller gets the updated profile as a model
+        assertEquals("Johnny", result.getUser().getFirstName());
+        assertEquals(USERNAME, result.getUser().getUsername());
     }
 
     @Test
@@ -266,11 +276,11 @@ public class TraineeServiceImplTest {
         verify(traineeDao, never()).findByUsername(any());
     }
 
-// ---------- delete ----------
+    // ---------- delete ----------
 
     @Test
     void delete_rightCredentials_deletesTrainee() {
-        Trainee trainee = existingTrainee(true);
+        TraineeEntity trainee = existingTrainee(true);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
         traineeService.delete(VALID_CREDENTIALS);
@@ -287,16 +297,17 @@ public class TraineeServiceImplTest {
         verify(traineeDao, never()).delete(any());
     }
 
-// ---------- getTrainings ----------
+    // ---------- getTrainings ----------
 
     @Test
     void getTrainings_passesUsernameAndCriteriaToDao() {
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
         TraineeTrainingCriteria criteria = TraineeTrainingCriteria.builder().trainerName("Anna").build();
-        List<Training> trainings = List.of(new Training());
-        when(trainingDao.findTraineeTrainings(USERNAME, criteria)).thenReturn(trainings);
+        when(trainingDao.findTraineeTrainings(USERNAME, criteria)).thenReturn(List.of(trainingRow("Morning yoga")));
 
-        assertSame(trainings, traineeService.getTrainings(VALID_CREDENTIALS, criteria));
+        List<Training> result = traineeService.getTrainings(VALID_CREDENTIALS, criteria);
+
+        assertEquals(List.of("Morning yoga"), result.stream().map(Training::getTrainingName).toList());
     }
 
     @Test
@@ -318,26 +329,27 @@ public class TraineeServiceImplTest {
         verify(trainingDao, never()).findTraineeTrainings(any(), any());
     }
 
-// ---------- getUnassignedTrainers ----------
+    // ---------- getUnassignedTrainers ----------
 
     @Test
-    void getUnassignedTrainers_returnsDaoResult() {
+    void getUnassignedTrainers_returnsDaoResultAsModels() {
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
-        List<Trainer> trainers = List.of(trainerWithUsername("Mark.Hill"));
-        when(trainerDao.findNotAssignedToTrainee(USERNAME)).thenReturn(trainers);
+        when(trainerDao.findNotAssignedToTrainee(USERNAME)).thenReturn(List.of(trainerWithUsername("Mark.Hill")));
 
-        assertSame(trainers, traineeService.getUnassignedTrainers(VALID_CREDENTIALS));
+        List<Trainer> result = traineeService.getUnassignedTrainers(VALID_CREDENTIALS);
+
+        assertEquals(List.of("Mark.Hill"), result.stream().map(trainer -> trainer.getUser().getUsername()).toList());
     }
 
-// ---------- updateTrainers ----------
+    // ---------- updateTrainers ----------
 
     @Test
     void updateTrainers_replacesWholeList() {
-        Trainee trainee = existingTrainee(true);
+        TraineeEntity trainee = existingTrainee(true);
         trainee.getTrainers().add(trainerWithUsername("Old.Trainer"));
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
-        Trainer anna = trainerWithUsername("Anna.Lee");
-        Trainer mark = trainerWithUsername("Mark.Hill");
+        TrainerEntity anna = trainerWithUsername("Anna.Lee");
+        TrainerEntity mark = trainerWithUsername("Mark.Hill");
         when(trainerDao.findByUsernames(Set.of("Anna.Lee", "Mark.Hill"))).thenReturn(List.of(anna, mark));
 
         // Anna.Lee twice: duplicates are ignored
@@ -348,8 +360,8 @@ public class TraineeServiceImplTest {
 
     @Test
     void updateTrainers_unknownUsername_throwsAndKeepsOldList() {
-        Trainee trainee = existingTrainee(true);
-        Trainer oldTrainer = trainerWithUsername("Old.Trainer");
+        TraineeEntity trainee = existingTrainee(true);
+        TrainerEntity oldTrainer = trainerWithUsername("Old.Trainer");
         trainee.getTrainers().add(oldTrainer);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
         when(trainerDao.findByUsernames(Set.of("Anna.Lee", "No.Body")))
@@ -362,11 +374,27 @@ public class TraineeServiceImplTest {
         assertEquals(Set.of(oldTrainer), trainee.getTrainers());
     }
 
-    private static Trainee traineeWithUsername(String username) {
-        return Trainee.builder().user(User.builder().username(username).build()).build();
+    private static TraineeEntity traineeWithUsername(String username) {
+        return TraineeEntity.builder().user(UserEntity.builder().username(username).build()).build();
     }
 
-    private static Trainer trainerWithUsername(String username) {
-        return Trainer.builder().user(User.builder().username(username).build()).build();
+    /** A trainer row: the mapper needs the user and the specialization. */
+    private static TrainerEntity trainerWithUsername(String username) {
+        return TrainerEntity.builder()
+                .user(UserEntity.builder().username(username).build())
+                .specialization(YOGA)
+                .build();
+    }
+
+    /** A complete training row, as the DAO loads it with all its links. */
+    private static TrainingEntity trainingRow(String name) {
+        return TrainingEntity.builder()
+                .trainingName(name)
+                .trainee(existingTrainee(true))
+                .trainer(trainerWithUsername("Anna.Lee"))
+                .trainingType(YOGA)
+                .trainingDate(LocalDate.of(2026, 10, 5))
+                .trainingDuration(60)
+                .build();
     }
 }

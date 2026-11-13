@@ -1,11 +1,11 @@
 package com.epam.training.gym.api.facade;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
-import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
+import com.epam.training.gym.model.Trainee;
+import com.epam.training.gym.model.Trainer;
+import com.epam.training.gym.model.Training;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;

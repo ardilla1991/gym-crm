@@ -1,8 +1,8 @@
 package com.epam.training.gym.service.validation;
 
-import com.epam.training.gym.domain.Trainee;
-import com.epam.training.gym.domain.Trainer;
-import com.epam.training.gym.domain.User;
+import com.epam.training.gym.model.Trainee;
+import com.epam.training.gym.model.Trainer;
+import com.epam.training.gym.model.User;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;

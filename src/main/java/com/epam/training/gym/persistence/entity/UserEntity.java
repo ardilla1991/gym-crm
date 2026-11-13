@@ -1,14 +1,14 @@
-package com.epam.training.gym.domain;
+package com.epam.training.gym.persistence.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 /**
- * Common profile data of a trainee or a trainer (table "users").
+ * Database row of a user (table "users"): common data of a trainee or a trainer.
  * "user" is a reserved word in PostgreSQL and H2, so the table is called "users".
+ * The entity name stays "User", so JPQL queries refer to it as before.
  */
-@Entity
+@Entity(name = "User")
 @Table(name = "users")
 @Getter
 @Setter
@@ -16,16 +16,15 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @ToString
-public class User {
+public class UserEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
-    @NotBlank
     @Column(name = "last_name", nullable = false)
     private String lastName;
 

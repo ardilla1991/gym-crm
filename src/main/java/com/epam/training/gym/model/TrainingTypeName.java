@@ -1,4 +1,4 @@
-package com.epam.training.gym.domain;
+package com.epam.training.gym.model;
 
 /**
  * The fixed list of allowed training type names.

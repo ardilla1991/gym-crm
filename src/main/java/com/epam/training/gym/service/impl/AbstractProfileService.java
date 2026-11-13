@@ -1,25 +1,27 @@
 package com.epam.training.gym.service.impl;
 
-import com.epam.training.gym.domain.User;
-import com.epam.training.gym.domain.UserProfile;
-import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.model.UserProfile;
+import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.persistence.entity.ProfileEntity;
+import com.epam.training.gym.persistence.entity.UserEntity;
 import com.epam.training.gym.service.AccountService;
 import com.epam.training.gym.service.auth.UserAuthenticator;
+import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.epam.training.gym.service.exception.AuthenticationException;
-
 import java.util.Optional;
 
 /**
- * Account operations shared by trainee and trainer services (Template Method):
- * subclasses only say where to find a profile by username.
+ * Account operations shared by trainee and trainer services (Template Method).
+ * Inside, the services work with entities (E); outside, they return models (M).
+ * Subclasses say where to find a profile by username and how to convert it to a model.
  */
-public abstract class AbstractProfileService <T extends UserProfile> implements AccountService<T> {
+public abstract class AbstractProfileService<M extends UserProfile, E extends ProfileEntity>
+        implements AccountService<M> {
 
     /** Named after the real class: TraineeServiceImpl or TrainerServiceImpl. */
     protected final Logger log = LoggerFactory.getLogger(getClass());
@@ -37,20 +39,26 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
         this.userAuthenticator = userAuthenticator;
     }
 
-    /** Trainee or trainer with this username: the only step that differs. */
-    protected abstract Optional<T> findByUsername(String username);
+    /** Trainee or trainer row with this username: the only lookup that differs. */
+    protected abstract Optional<E> findByUsername(String username);
 
-    /** Profile with its linked list loaded: trainee's trainers or trainer's trainees. */
-    protected abstract Optional<T> findProfileByUsername(String username);
+    /** Profile row with its linked list loaded: trainee's trainers or trainer's trainees. */
+    protected abstract Optional<E> findProfileByUsername(String username);
+
+    /** Entity to model, without the linked list. */
+    protected abstract M toModel(E entity);
+
+    /** Entity to model with its linked list: for an entity loaded by findProfileByUsername. */
+    protected abstract M toProfileModel(E entity);
 
     @Override
     @Transactional(readOnly = true)
-    public T getProfile(Credentials credentials, String username) {
+    public M getProfile(Credentials credentials, String username) {
         userAuthenticator.authenticate(credentials);
-        T profile = findProfileByUsername(username)
+        E profile = findProfileByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException(profileName, username));
         log.info("{} profile read: username={}, by={}", profileName, username, credentials.username());
-        return profile;
+        return toProfileModel(profile);
     }
 
     @Override
@@ -67,30 +75,39 @@ public abstract class AbstractProfileService <T extends UserProfile> implements 
         if (newPassword == null || newPassword.isBlank()) {
             throw new IllegalArgumentException("New password must not be blank");
         }
-        authenticate(credentials).getUser().setPassword(newPassword);
+        // A managed entity: Hibernate writes the change at commit (dirty checking)
+        authenticateEntity(credentials).getUser().setPassword(newPassword);
         log.info("{} password changed: username={}", profileName, credentials.username());
     }
 
     @Override
     @Transactional
     public boolean toggleActive(Credentials credentials) {
-        User user = authenticate(credentials).getUser();
+        UserEntity user = authenticateEntity(credentials).getUser();
         user.setActive(!user.isActive());
         log.info("{} {} is now {}", profileName, user.getUsername(), user.isActive() ? "active" : "inactive");
         return user.isActive();
     }
 
-    /** Loads the profile if the credentials are right; every operation except create starts with it. */
+    /** The caller's own profile as a model, if the credentials are right. */
     @Override
-    @Transactional
-    public T authenticate(Credentials credentials) {
+    @Transactional(readOnly = true)
+    public M authenticate(Credentials credentials) {
+        return toModel(authenticateEntity(credentials));
+    }
+
+    /**
+     * The caller's own profile row, if the credentials are right; every operation except create starts with it.
+     * Called inside the services' transactions, so the entity is managed and its changes are saved at commit.
+     */
+    protected E authenticateEntity(Credentials credentials) {
         return findWithCredentials(credentials).orElseThrow(() -> {
             log.warn("{} authentication failed: username={}", profileName, credentials.username());
             return new AuthenticationException();
         });
     }
 
-    private Optional<T> findWithCredentials(Credentials credentials) {
+    private Optional<E> findWithCredentials(Credentials credentials) {
         return findByUsername(credentials.username())
                 .filter(profile -> profile.getUser().getPassword().equals(credentials.password()));
     }

@@ -1,7 +1,7 @@
 package com.epam.training.gym.service;
 
-import com.epam.training.gym.domain.UserProfile;
-import com.epam.training.gym.domain.auth.Credentials;
+import com.epam.training.gym.model.UserProfile;
+import com.epam.training.gym.model.auth.Credentials;
 
 /**
  * Account operations shared by trainees and trainers.

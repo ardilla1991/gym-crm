@@ -1,11 +1,15 @@
 package com.epam.training.gym.persistence.dao.impl;
 
-import com.epam.training.gym.domain.*;
-import com.epam.training.gym.domain.criteria.TraineeTrainingCriteria;
-import com.epam.training.gym.domain.criteria.TrainerTrainingCriteria;
+import com.epam.training.gym.model.TrainingTypeName;
+import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.QueryCounter;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.TrainingDao;
+import com.epam.training.gym.persistence.entity.TraineeEntity;
+import com.epam.training.gym.persistence.entity.TrainerEntity;
+import com.epam.training.gym.persistence.entity.TrainingEntity;
+import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,8 +41,8 @@ public class TrainingDaoImplTest {
     @PersistenceContext
     private EntityManager entityManager;
 
-    private TrainingType fitness;
-    private TrainingType yoga;
+    private TrainingTypeEntity fitness;
+    private TrainingTypeEntity yoga;
 
     /**
      * trainingName | trainee + trainer | trainingType | trainingDate
@@ -49,13 +53,13 @@ public class TrainingDaoImplTest {
      */
     @BeforeEach
     void createTrainings() {
-        fitness = entityManager.find(TrainingType.class, FITNESS_ID);
-        yoga = entityManager.find(TrainingType.class, YOGA_ID);
+        fitness = entityManager.find(TrainingTypeEntity.class, FITNESS_ID);
+        yoga = entityManager.find(TrainingTypeEntity.class, YOGA_ID);
 
-        Trainee john = persist(newTrainee("John", "Smith", "John.Smith"));
-        Trainee mary = persist(newTrainee("Mary", "Jones", "Mary.Jones"));
-        Trainer anna = persist(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
-        Trainer mark = persist(newTrainer("Mark", "Hill", "Mark.Hill", fitness));
+        TraineeEntity john = persist(newTrainee("John", "Smith", "John.Smith"));
+        TraineeEntity mary = persist(newTrainee("Mary", "Jones", "Mary.Jones"));
+        TrainerEntity anna = persist(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
+        TrainerEntity mark = persist(newTrainer("Mark", "Hill", "Mark.Hill", fitness));
 
         persist(training("Yoga Jan", john, anna, yoga, LocalDate.of(2026, 1, 10)));
         persist(training("Fitness Feb", john, mark, fitness, LocalDate.of(2026, 2, 11)));
@@ -70,16 +74,16 @@ public class TrainingDaoImplTest {
 
     @Test
     void save_storesTrainingWithAllLinks() {
-        Trainee trainee = persist(newTrainee("Tom", "Brown", "Tom.Brown"));
-        Trainer trainer = persist(newTrainer("Kate", "Moss", "Kate.Moss", yoga));
+        TraineeEntity trainee = persist(newTrainee("Tom", "Brown", "Tom.Brown"));
+        TrainerEntity trainer = persist(newTrainer("Kate", "Moss", "Kate.Moss", yoga));
 
-        Training saved = trainingDao.save(
+        TrainingEntity saved = trainingDao.save(
                 training("Morning yoga", trainee, trainer, yoga, LocalDate.of(2026, 2, 1)));
         entityManager.flush();
         entityManager.clear();
 
         assertNotNull(saved.getId());
-        Training found = entityManager.find(Training.class, saved.getId());
+        TrainingEntity found = entityManager.find(TrainingEntity.class, saved.getId());
         assertEquals("Tom.Brown", found.getTrainee().getUser().getUsername());
         assertEquals("Kate.Moss", found.getTrainer().getUser().getUsername());
         assertEquals(TrainingTypeName.YOGA, found.getTrainingType().getTrainingTypeName());
@@ -91,7 +95,7 @@ public class TrainingDaoImplTest {
 
     @Test
     void findTraineeTrainings_noFilters_returnsOnlyThisTraineesTrainingsByDate() {
-        List<Training> found = trainingDao.findTraineeTrainings("John.Smith", NO_TRAINEE_FILTERS);
+        List<TrainingEntity> found = trainingDao.findTraineeTrainings("John.Smith", NO_TRAINEE_FILTERS);
 
         assertEquals(List.of("Yoga Jan", "Fitness Feb", "Yoga Mar"), names(found));
     }
@@ -158,7 +162,7 @@ public class TrainingDaoImplTest {
 
     @Test
     void findTrainerTrainings_noFilters_returnsOnlyThisTrainersTrainingsByDate() {
-        List<Training> found = trainingDao.findTrainerTrainings("Anna.Lee", NO_TRAINER_FILTERS);
+        List<TrainingEntity> found = trainingDao.findTrainerTrainings("Anna.Lee", NO_TRAINER_FILTERS);
 
         assertEquals(List.of("Yoga Jan", "Yoga Mar", "Mary yoga"), names(found));
     }
@@ -191,9 +195,9 @@ public class TrainingDaoImplTest {
         return entity;
     }
 
-    private static Training training(String name, Trainee trainee, Trainer trainer,
-                                     TrainingType type, LocalDate date) {
-        return Training.builder()
+    private static TrainingEntity training(String name, TraineeEntity trainee, TrainerEntity trainer,
+                                     TrainingTypeEntity type, LocalDate date) {
+        return TrainingEntity.builder()
                 .trainingName(name)
                 .trainee(trainee)
                 .trainer(trainer)
@@ -204,9 +208,9 @@ public class TrainingDaoImplTest {
     }
 
     /** Names of the trainings in the same order. */
-    private static List<String> names(List<Training> trainings) {
+    private static List<String> names(List<TrainingEntity> trainings) {
         return trainings.stream()
-                .map(Training::getTrainingName)
+                .map(TrainingEntity::getTrainingName)
                 .toList();
     }
 
@@ -231,7 +235,7 @@ public class TrainingDaoImplTest {
     }
 
     /** Reads every linked object, so anything not loaded yet is loaded now and counted. */
-    private static void touchAllLinks(Training training) {
+    private static void touchAllLinks(TrainingEntity training) {
         training.getTrainee().getUser().getUsername();
         training.getTrainer().getUser().getUsername();
         training.getTrainer().getSpecialization().getTrainingTypeName();

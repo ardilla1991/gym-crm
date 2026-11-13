@@ -1,14 +1,9 @@
 package com.epam.training.gym.service;
 
-import com.epam.training.gym.domain.Training;
-import com.epam.training.gym.domain.auth.Credentials;
-import com.epam.training.gym.service.exception.EntityNotFoundException;
-
-import java.util.List;
+import com.epam.training.gym.model.Training;
+import com.epam.training.gym.model.auth.Credentials;
 
 public interface TrainingService {
-
-    Training create(Training training);
 
     /**
      * The trainee adds a training with the given trainer.
