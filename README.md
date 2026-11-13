@@ -1,6 +1,7 @@
 # Gym CRM
 
-Gym CRM module on plain Spring Framework (no Spring Boot) with JPA and Hibernate.
+Gym CRM on plain Spring Framework (no Spring Boot) with JPA and Hibernate.
+One Maven module; the layers are packages: `domain`, `persistence`, `service`, `config`, `api`.
 
 Requirements: JDK 21, Maven 3.9+. Optional: Docker or a local PostgreSQL.
 
@@ -12,20 +13,20 @@ The demo in `Main` calls every operation through `GymFacade` and logs each step 
 
 ```bash
 mvn clean install
-mvn -pl api exec:java
+mvn compile exec:java
 ```
 
 **PostgreSQL in Docker:**
 
 ```bash
 docker compose up -d
-mvn -pl api exec:java -Ddb=postgres
+mvn compile exec:java -Ddb=postgres
 ```
 
 **Local PostgreSQL:** create the database `gym_crm`, then
 
 ```bash
-mvn -pl api exec:java -Ddb=postgres -Ddb.username=<user> -Ddb.password=<password>
+mvn compile exec:java -Ddb=postgres -Ddb.username=<user> -Ddb.password=<password>
 ```
 
 Tables are created by Hibernate on every start; initial data comes from `config/src/main/resources/db/data.sql`.
@@ -36,7 +37,7 @@ Tables are created by Hibernate on every start; initial data comes from `config/
 mvn clean install
 ```
 
-Coverage report for the whole project: `api/target/site/jacoco-aggregate/index.html` (row **Total**, column **Lines**).
+Coverage report: `target/site/jacoco/index.html` (row **Total**, column **Lines**).
 
 ## Who can do what
 
