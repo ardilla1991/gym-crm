@@ -1,93 +1,83 @@
 # Gym CRM
 
-A Spring-based module of a gym CRM system: trainees, trainers and trainings stored in an in-memory storage.
-Plain Spring Framework (no Spring Boot), Java-based configuration.
+Gym CRM on plain Spring Framework (no Spring Boot) with JPA and Hibernate.
 
-## Requirements
+## Layers
 
-- JDK 21
-- Maven 3.9+ (or the Maven Wrapper from the repository: `mvnw` / `mvnw.cmd`)
+One Maven module; the layers are packages.
 
-## Modules
+| Package       | What is there                                                        | Works with                         |
+|---------------|----------------------------------------------------------------------|------------------------------------|
+| `api`         | `GymFacade`, `Main`                                                  | models                             |
+| `service`     | business logic, model validation; mappers in `service.mapper`        | models outside, entities inside    |
+| `persistence` | DAOs; JPA entities in `persistence.entity`                           | entities                           |
+| `model`       | models: Lombok and validation, no JPA                                | —                                  |
+| `config`      | Spring and database configuration                                    | —                                  |
 
-| Module        | Contents                                                                                   |
-|---------------|--------------------------------------------------------------------------------------------|
-| `domain`      | Entities: `User`, `Trainee`, `Trainer`, `Training`, `TrainingType`                          |
-| `persistence` | DAOs, storage bean names, `StorageInitializer` (loads initial data from files at startup)  |
-| `service`     | `TraineeService`, `TrainerService`, `TrainingService`, username and password generation    |
-| `config`      | Spring configuration (`AppConfig`, `StorageConfig`), `application.properties`, data files  |
-| `api`         | `GymFacade` (single entry point) and `Main` (runs a demo scenario)                          |
+Requirements: JDK 21, Maven 3.9+. Optional: Docker or a local PostgreSQL.
 
-Dependencies go in one direction: `domain ← persistence ← service ← config ← api`.
+## Run
 
-## Build
+The demo in `Main` calls every operation through `GymFacade` and logs each step with the generated SQL.
 
-From the project root:
+**H2 (default, nothing to install):**
+
+```bash
+mvn clean install
+mvn compile exec:java
+```
+
+**PostgreSQL in Docker:**
+
+```bash
+docker compose up -d
+mvn compile exec:java -Ddb=postgres
+```
+
+**Local PostgreSQL:** create the database `gym_crm`, then
+
+```bash
+mvn compile exec:java -Ddb=postgres -Ddb.username=<user> -Ddb.password=<password>
+```
+
+Tables are created by Hibernate on every start; initial data comes from `src/main/resources/db/data.sql`.
+
+## Tests and coverage
 
 ```bash
 mvn clean install
 ```
 
-This compiles all modules, runs all unit tests and builds the coverage report.
+Coverage report: `target/site/jacoco/index.html` (row **Total**, column **Lines**).
 
-## Run
+## Who can do what
 
-**From IntelliJ IDEA:** open `api/src/main/java/.../Main.java` and run `main()`.
+Every operation except creating a profile takes the `Credentials` (username and password) of the user who performs it.
 
-**From the command line** (after `mvn clean install`):
+| Operation                                           | Who must sign in | Whose data         |
+|-----------------------------------------------------|------------------|--------------------|
+| Create trainee / trainer profile                    | nobody           | new profile        |
+| Check username and password                         | —                | own                |
+| Read trainee / trainer profile by username          | any user         | any profile        |
+| Change password, update profile, activate/deactivate | the user         | own                |
+| Delete trainee profile                              | the trainee      | own                |
+| Get trainings by criteria                           | the trainee / trainer | own           |
+| Add training                                        | the trainee      | own, with any trainer |
+| Get not assigned trainers, update trainers list     | the trainee      | own                |
 
-```bash
-mvn -pl api exec:java
-```
+## Decisions
 
-`Main` starts the Spring context, prints the data loaded from the files, then creates a trainee and a trainer,
-updates the trainee, creates a training and deletes the trainee, logging every step.
+- Reading a profile by username is allowed to any signed-in user; every other operation works only with the caller's own data.
+- Training criteria: dates are inclusive; names are compared with the first name, case-insensitive.
+- Deleting a trainee deletes the trainee's trainings through the JPA cascade (`CascadeType.REMOVE`);
+  for many trainings `ON DELETE CASCADE` in the database would be faster.
+- Trainings and profiles are loaded with `JOIN FETCH` in one query to avoid the N+1 problem.
+- Models are separate from the JPA entities and are converted by the mappers in `service.mapper`.
+  An update changes the loaded entity, and Hibernate saves it at commit (dirty checking).
+- Validation: field rules are annotations on the models, checked by the services before any database access;
+  business rules are checked in the services; the entities only have column constraints.
 
-## Configuration
+## Why Training Type is a separate table
 
-Initial data is loaded on startup from JSON files; their paths are set in
-`config/src/main/resources/application.properties`:
-
-```properties
-storage.init.trainee=classpath:data/trainees.json
-storage.init.trainer=classpath:data/trainers.json
-storage.init.training=classpath:data/trainings.json
-storage.init.training-type=classpath:data/training-types.json
-```
-
-To use a file outside the project, use the `file:` prefix, e.g. `file:C:/gym/data/trainees.json`.
-
-Logging is configured in `api/src/main/resources/simplelogger.properties`
-(default level `INFO`; uncomment the line there to see `DEBUG` messages of the application).
-
-## Username and password rules
-
-- **Username:** `FirstName.LastName`, e.g. `John.Smith`.
-  If a trainee or trainer with this username already exists, the first free serial number is added:
-  `John.Smith1`, `John.Smith2`, ...
-- **Password:** random string of 10 characters.
-
-## Tests and coverage
-
-Run all tests:
-
-```bash
-mvn clean test
-```
-
-Coverage is measured by JaCoCo. After the tests, open the report for the whole project in a browser:
-
-```
-api/target/site/jacoco-aggregate/index.html
-```
-
-The **Total** row shows the coverage of all modules; the **Lines** column is the line coverage.
-Click a module, package or class to see the source code: covered lines are green, uncovered are red.
-
-Reports for single modules (only modules that have their own tests):
-
-```
-persistence/target/site/jacoco/index.html
-service/target/site/jacoco/index.html
-api/target/site/jacoco/index.html
-```
+Trainings and trainers refer to a type by id: only existing types can be used (no `Yoga` / `YOGA` duplicates),
+trainers and trainings share one list of types, and a type is changed in one place.
