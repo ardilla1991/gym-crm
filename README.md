@@ -3,35 +3,44 @@
 REST API for a gym CRM on plain Spring Framework 7 (no Spring Boot): Spring MVC on embedded Tomcat,
 JPA with Hibernate, H2 or PostgreSQL.
 
-Requirements: JDK 21, Maven 3.9+. Optional: Docker or a local PostgreSQL.
+## Layers
 
-Modules: `domain` (entities) → `persistence` (DAOs) → `service` (business logic) → `config` (Spring, database) →
-`api` (REST controllers, facade, the runnable `Main`).
+One Maven module; the layers are packages.
+
+| Package       | What is there                                                             | Works with                      |
+|---------------|---------------------------------------------------------------------------|---------------------------------|
+| `api.rest`    | REST controllers, DTOs and their mappers, error handling, logging filters | DTOs outside, models inside     |
+| `api`         | `Main`, `GymApplication` (embedded Tomcat), `GymFacade`                   | models                          |
+| `service`     | business logic, model validation; mappers in `service.mapper`             | models outside, entities inside |
+| `persistence` | DAOs; JPA entities in `persistence.entity`                                | entities                        |
+| `model`       | models: Lombok and validation, no JPA                                     | —                               |
+| `config`      | Spring and database configuration                                         | —                               |
+
+Requirements: JDK 21, Maven 3.9+. Optional: Docker or a local PostgreSQL.
 
 ## Run
 
 **H2 (default, nothing to install):**
 
 ```bash
-mvn clean install
-mvn -pl api exec:java
+mvn compile exec:java
 ```
 
 **PostgreSQL in Docker:**
 
 ```bash
 docker compose up -d
-mvn -pl api exec:java -Ddb=postgres
+mvn compile exec:java -Ddb=postgres
 ```
 
 **Local PostgreSQL:** create the database `gym_crm`, then
 
 ```bash
-mvn -pl api exec:java -Ddb=postgres -Ddb.username=<user> -Ddb.password=<password>
+mvn compile exec:java -Ddb=postgres -Ddb.username=<user> -Ddb.password=<password>
 ```
 
 The server starts on port 8080; another port: `-Dserver.port=9090`.
-Tables are created by Hibernate on every start; initial data comes from `config/src/main/resources/db/data.sql`.
+Tables are created by Hibernate on every start; initial data comes from `src/main/resources/db/data.sql`.
 
 - Swagger UI: http://localhost:8080/swagger-ui/index.html (press **Authorize** and enter a username and password)
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
@@ -111,7 +120,7 @@ Every error has the same JSON body: `{"status": 404, "error": "Not Found", "mess
 
 ## Logging
 
-Logback, configured in `api/src/main/resources/logback.xml`.
+Logback, configured in `src/main/resources/logback.xml`.
 
 - **Transaction id.** Every REST call gets a transactionId: from the `X-Transaction-Id` request header if it is valid,
   otherwise a new UUID. It is put into the MDC, so every log line of the call (controller, service, DAO and Hibernate SQL)
@@ -130,9 +139,10 @@ request: {"firstName":"Anna","lastName":"Lee"}, response: {"username":"Anna.Lee"
 mvn clean install
 ```
 
-Coverage report for the whole project: `api/target/site/jacoco-aggregate/index.html` (row **Total**).
+Coverage report: `target/site/jacoco/index.html` (row **Total**, column **Lines**).
 Not covered on purpose: `Main` and `GymApplication.await()` (they start and block the server;
 `GymApplicationTest` starts and stops the whole application instead).
+
 ## Decisions
 
 - Not both a trainer and a trainee (note 2): every registration creates a new user with its own username,
@@ -149,6 +159,16 @@ Not covered on purpose: `Main` and `GymApplication.await()` (they start and bloc
 - Deleting a trainee deletes the trainee's trainings through the JPA cascade (`CascadeType.REMOVE`).
   Hibernate deletes them one by one; for many trainings `ON DELETE CASCADE` in the database would be faster.
 - Trainings and profiles are loaded with `JOIN FETCH` in one query to avoid the N+1 problem.
+- Models are separate from the JPA entities and are converted by the mappers in `service.mapper`.
+  An update changes the loaded entity, and Hibernate saves it at commit (dirty checking).
+- Validation: request bodies are checked in the controllers (`@Valid` on the DTOs, 400 on error);
+  field rules on the models are checked by the services before any database access, after authentication;
+  business rules are checked in the services; the entities only have column constraints.
 - Swagger UI comes from springdoc. springdoc is made for Spring Boot, so without Boot its configuration is registered
   by hand in `WebConfig`, as the springdoc FAQ describes; `spring-boot-autoconfigure` is only a library it depends on,
   the application itself does not use Spring Boot.
+
+## Why Training Type is a separate table
+
+Trainings and trainers refer to a type by id: only existing types can be used (no `Yoga` / `YOGA` duplicates),
+trainers and trainings share one list of types, and a type is changed in one place.
