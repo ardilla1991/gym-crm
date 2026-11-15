@@ -2,7 +2,6 @@ package com.epam.training.gym.service.auth;
 
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.persistence.dao.UserDao;
-import com.epam.training.gym.persistence.entity.UserEntity;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,16 +24,16 @@ public class UserAuthenticator {
         this.userDao = userDao;
     }
 
-    /**
-     * @return the signed-in user, trainee or trainer; a managed entity, so changes to it are saved at commit
-     * @throws AuthenticationException if the username or the password is wrong
-     */
-    public UserEntity authenticate(Credentials credentials) {
-        return userDao.findByUsername(credentials.username())
-                .filter(user -> user.getPassword().equals(credentials.password()))
-                .orElseThrow(() -> {
-                    log.warn("User authentication failed: username={}", credentials.username());
-                    return new AuthenticationException();
-                });
+    /** True if a user with this username exists and the password matches. */
+    public boolean matches(Credentials credentials) {
+        return userDao.matchesPassword(credentials.username(), credentials.password());
+    }
+
+    /** @throws AuthenticationException if the username or the password is wrong */
+    public void authenticate(Credentials credentials) {
+        if (!matches(credentials)) {
+            log.warn("User authentication failed: username={}", credentials.username());
+            throw new AuthenticationException();
+        }
     }
 }

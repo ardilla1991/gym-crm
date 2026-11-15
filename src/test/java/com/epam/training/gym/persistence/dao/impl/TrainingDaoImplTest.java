@@ -1,5 +1,9 @@
 package com.epam.training.gym.persistence.dao.impl;
 
+import com.epam.training.gym.model.Trainee;
+import com.epam.training.gym.model.Trainer;
+import com.epam.training.gym.model.Training;
+import com.epam.training.gym.model.TrainingType;
 import com.epam.training.gym.model.TrainingTypeName;
 import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
@@ -77,12 +81,21 @@ public class TrainingDaoImplTest {
         TraineeEntity trainee = persist(newTrainee("Tom", "Brown", "Tom.Brown"));
         TrainerEntity trainer = persist(newTrainer("Kate", "Moss", "Kate.Moss", yoga));
 
-        TrainingEntity saved = trainingDao.save(
-                training("Morning yoga", trainee, trainer, yoga, LocalDate.of(2026, 2, 1)));
+        Training training = Training.builder()
+                .trainee(Trainee.builder().id(trainee.getId()).build())
+                .trainer(Trainer.builder().id(trainer.getId()).build())
+                .trainingType(new TrainingType(YOGA_ID, TrainingTypeName.YOGA))
+                .trainingName("Morning yoga")
+                .trainingDate(LocalDate.of(2026, 2, 1))
+                .trainingDuration(60)
+                .build();
+
+        Training saved = trainingDao.save(training);
         entityManager.flush();
         entityManager.clear();
 
         assertNotNull(saved.getId());
+        assertEquals("Tom.Brown", saved.getTrainee().getUser().getUsername());
         TrainingEntity found = entityManager.find(TrainingEntity.class, saved.getId());
         assertEquals("Tom.Brown", found.getTrainee().getUser().getUsername());
         assertEquals("Kate.Moss", found.getTrainer().getUser().getUsername());
@@ -95,7 +108,7 @@ public class TrainingDaoImplTest {
 
     @Test
     void findTraineeTrainings_noFilters_returnsOnlyThisTraineesTrainingsByDate() {
-        List<TrainingEntity> found = trainingDao.findTraineeTrainings("John.Smith", NO_TRAINEE_FILTERS);
+        List<Training> found = trainingDao.findTraineeTrainings("John.Smith", NO_TRAINEE_FILTERS);
 
         assertEquals(List.of("Yoga Jan", "Fitness Feb", "Yoga Mar"), names(found));
     }
@@ -162,7 +175,7 @@ public class TrainingDaoImplTest {
 
     @Test
     void findTrainerTrainings_noFilters_returnsOnlyThisTrainersTrainingsByDate() {
-        List<TrainingEntity> found = trainingDao.findTrainerTrainings("Anna.Lee", NO_TRAINER_FILTERS);
+        List<Training> found = trainingDao.findTrainerTrainings("Anna.Lee", NO_TRAINER_FILTERS);
 
         assertEquals(List.of("Yoga Jan", "Yoga Mar", "Mary yoga"), names(found));
     }
@@ -208,9 +221,9 @@ public class TrainingDaoImplTest {
     }
 
     /** Names of the trainings in the same order. */
-    private static List<String> names(List<TrainingEntity> trainings) {
+    private static List<String> names(List<Training> trainings) {
         return trainings.stream()
-                .map(TrainingEntity::getTrainingName)
+                .map(Training::getTrainingName)
                 .toList();
     }
 
@@ -218,9 +231,9 @@ public class TrainingDaoImplTest {
     void findTraineeTrainings_loadsTrainingsWithAllLinksInOneQuery() {
         QueryCounter queries = new QueryCounter(entityManager);
 
-        trainingDao.findTraineeTrainings("John.Smith", NO_TRAINEE_FILTERS)
-                .forEach(TrainingDaoImplTest::touchAllLinks);
+        List<Training> found = trainingDao.findTraineeTrainings("John.Smith", NO_TRAINEE_FILTERS);
 
+        assertEquals(3, found.size());
         assertEquals(1, queries.count());
     }
 
@@ -228,18 +241,10 @@ public class TrainingDaoImplTest {
     void findTrainerTrainings_loadsTrainingsWithAllLinksInOneQuery() {
         QueryCounter queries = new QueryCounter(entityManager);
 
-        trainingDao.findTrainerTrainings("Anna.Lee", NO_TRAINER_FILTERS)
-                .forEach(TrainingDaoImplTest::touchAllLinks);
+        List<Training> found = trainingDao.findTrainerTrainings("Anna.Lee", NO_TRAINER_FILTERS);
 
+        assertEquals(3, found.size());
         assertEquals(1, queries.count());
-    }
-
-    /** Reads every linked object, so anything not loaded yet is loaded now and counted. */
-    private static void touchAllLinks(TrainingEntity training) {
-        training.getTrainee().getUser().getUsername();
-        training.getTrainer().getUser().getUsername();
-        training.getTrainer().getSpecialization().getTrainingTypeName();
-        training.getTrainingType().getTrainingTypeName();
     }
 
 }

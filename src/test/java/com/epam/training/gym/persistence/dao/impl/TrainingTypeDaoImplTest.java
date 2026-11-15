@@ -3,7 +3,7 @@ package com.epam.training.gym.persistence.dao.impl;
 import com.epam.training.gym.model.TrainingTypeName;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
-import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
+import com.epam.training.gym.model.TrainingType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -25,7 +25,7 @@ public class TrainingTypeDaoImplTest {
 
     @Test
     void findByName_returnsTypeWithItsId() {
-        TrainingTypeEntity yoga = trainingTypeDao.findByName(TrainingTypeName.YOGA).orElseThrow();
+        TrainingType yoga = trainingTypeDao.findByName(TrainingTypeName.YOGA).orElseThrow();
 
         assertEquals(2L, yoga.getId());
     }
@@ -39,11 +39,11 @@ public class TrainingTypeDaoImplTest {
 
     @Test
     void findAll_returnsAllTypesOrderedByName() {
-        List<TrainingTypeEntity> types = trainingTypeDao.findAll();
+        List<TrainingType> types = trainingTypeDao.findAll();
 
         assertEquals(
                 List.of(TrainingTypeName.FITNESS, TrainingTypeName.RESISTANCE, TrainingTypeName.STRETCHING,
                         TrainingTypeName.YOGA, TrainingTypeName.ZUMBA),
-                types.stream().map(TrainingTypeEntity::getTrainingTypeName).toList());
+                types.stream().map(TrainingType::getTrainingTypeName).toList());
     }
 }

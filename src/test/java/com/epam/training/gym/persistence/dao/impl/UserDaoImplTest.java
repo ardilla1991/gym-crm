@@ -1,5 +1,6 @@
 package com.epam.training.gym.persistence.dao.impl;
 
+import com.epam.training.gym.model.User;
 import com.epam.training.gym.persistence.dao.TestJpaConfig;
 import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.persistence.entity.UserEntity;
@@ -15,6 +16,8 @@ import java.util.Set;
 
 import static com.epam.training.gym.persistence.dao.TestEntities.newUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringJUnitConfig(TestJpaConfig.class)
@@ -47,14 +50,33 @@ public class UserDaoImplTest {
     }
 
     @Test
-    void findByUsername_existing_returnsUserFromDatabase() {
+    void matchesPassword_rightPassword_true() {
         entityManager.persist(newUser("John", "Smith", "John.Smith"));
-        entityManager.flush();
-        entityManager.clear();
 
-        UserEntity found = userDao.findByUsername("John.Smith").orElseThrow();
+        assertTrue(userDao.matchesPassword("John.Smith", "abcde12345"));
+    }
+
+    @Test
+    void matchesPassword_wrongPassword_false() {
+        entityManager.persist(newUser("John", "Smith", "John.Smith"));
+
+        assertFalse(userDao.matchesPassword("John.Smith", "wrong"));
+    }
+
+    @Test
+    void matchesPassword_unknownUser_false() {
+        assertFalse(userDao.matchesPassword("No.Body", "abcde12345"));
+    }
+
+    @Test
+    void findByUsername_existing_returnsUserWithoutPassword() {
+        entityManager.persist(newUser("John", "Smith", "John.Smith"));
+        flushAndClear();
+
+        User found = userDao.findByUsername("John.Smith").orElseThrow();
 
         assertEquals("John", found.getFirstName());
+        assertNull(found.getPassword());
     }
 
     @Test
@@ -62,4 +84,32 @@ public class UserDaoImplTest {
         assertTrue(userDao.findByUsername("No.Body").isEmpty());
     }
 
+    @Test
+    void updatePassword_savesNewPassword() {
+        UserEntity user = newUser("John", "Smith", "John.Smith");
+        entityManager.persist(user);
+        flushAndClear();
+
+        userDao.updatePassword(User.builder().id(user.getId()).build(), "newPass123");
+        flushAndClear();
+
+        assertEquals("newPass123", entityManager.find(UserEntity.class, user.getId()).getPassword());
+    }
+
+    @Test
+    void updateActive_savesStatus() {
+        UserEntity user = newUser("John", "Smith", "John.Smith");
+        entityManager.persist(user);
+        flushAndClear();
+
+        userDao.updateActive(User.builder().id(user.getId()).isActive(false).build());
+        flushAndClear();
+
+        assertFalse(entityManager.find(UserEntity.class, user.getId()).isActive());
+    }
+
+    private void flushAndClear() {
+        entityManager.flush();
+        entityManager.clear();
+    }
 }

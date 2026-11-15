@@ -1,4 +1,4 @@
-package com.epam.training.gym.service.mapper;
+package com.epam.training.gym.persistence.mapper;
 
 import com.epam.training.gym.model.Trainee;
 import com.epam.training.gym.persistence.entity.TraineeEntity;

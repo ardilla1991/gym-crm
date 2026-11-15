@@ -2,7 +2,6 @@ package com.epam.training.gym.service.auth;
 
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.persistence.dao.UserDao;
-import com.epam.training.gym.persistence.entity.UserEntity;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,9 +9,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,30 +26,24 @@ public class UserAuthenticatorTest {
     private UserAuthenticator userAuthenticator;
 
     @Test
-    void authenticate_rightPassword_returnsUser() {
-        UserEntity user = existingUser();
-        when(userDao.findByUsername(USERNAME)).thenReturn(Optional.of(user));
+    void matches_asksDatabase() {
+        when(userDao.matchesPassword(USERNAME, CURRENT_PASSWORD)).thenReturn(true);
 
-        assertSame(user, userAuthenticator.authenticate(new Credentials(USERNAME, CURRENT_PASSWORD)));
+        assertTrue(userAuthenticator.matches(new Credentials(USERNAME, CURRENT_PASSWORD)));
     }
 
     @Test
-    void authenticate_wrongPassword_throws() {
-        when(userDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingUser()));
+    void authenticate_rightPassword_passes() {
+        when(userDao.matchesPassword(USERNAME, CURRENT_PASSWORD)).thenReturn(true);
+
+        assertDoesNotThrow(() -> userAuthenticator.authenticate(new Credentials(USERNAME, CURRENT_PASSWORD)));
+    }
+
+    @Test
+    void authenticate_wrongUsernameOrPassword_throws() {
+        when(userDao.matchesPassword(USERNAME, "wrong")).thenReturn(false);
 
         assertThrows(AuthenticationException.class,
                 () -> userAuthenticator.authenticate(new Credentials(USERNAME, "wrong")));
-    }
-
-    @Test
-    void authenticate_unknownUser_throws() {
-        when(userDao.findByUsername("User.Name")).thenReturn(Optional.empty());
-
-        assertThrows(AuthenticationException.class,
-                () -> userAuthenticator.authenticate(new Credentials("User.Name", CURRENT_PASSWORD)));
-    }
-
-    private static UserEntity existingUser() {
-        return UserEntity.builder().username(USERNAME).password(CURRENT_PASSWORD).build();
     }
 }

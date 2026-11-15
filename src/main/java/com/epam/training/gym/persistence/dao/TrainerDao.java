@@ -1,6 +1,6 @@
 package com.epam.training.gym.persistence.dao;
 
-import com.epam.training.gym.persistence.entity.TrainerEntity;
+import com.epam.training.gym.model.Trainer;
 
 import java.util.Collection;
 import java.util.List;
@@ -8,16 +8,20 @@ import java.util.Optional;
 
 public interface TrainerDao {
 
-    TrainerEntity save(TrainerEntity trainer);
+    /** The specialization must be an existing training type: it is linked by its id. */
+    Trainer save(Trainer trainer);
 
-    Optional<TrainerEntity> findByUsername(String username);
+    Optional<Trainer> findByUsername(String username);
 
     /** For updating a trainee's trainers list by trainer usernames. */
-    List<TrainerEntity> findByUsernames(Collection<String> usernames);
+    List<Trainer> findByUsernames(Collection<String> usernames);
 
     /** Active trainers that are not in the trainee's trainers list. */
-    List<TrainerEntity> findActiveNotAssignedToTrainee(String traineeUsername);
+    List<Trainer> findActiveNotAssignedToTrainee(String traineeUsername);
 
     /** Like findByUsername, but also loads the trainer's trainees: for returning the profile. */
-    Optional<TrainerEntity> findByUsernameWithTrainees(String username);
+    Optional<Trainer> findByUsernameWithTrainees(String username);
+
+    /** Saves the first and last name and status; other fields are not changed. */
+    Trainer update(Trainer trainer);
 }

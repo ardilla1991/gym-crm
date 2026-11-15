@@ -1,8 +1,10 @@
 package com.epam.training.gym.persistence.dao.impl;
 
+import com.epam.training.gym.model.TrainingType;
 import com.epam.training.gym.model.TrainingTypeName;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
 import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
+import com.epam.training.gym.persistence.mapper.TrainingTypeEntityMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
@@ -21,18 +23,21 @@ public class TrainingTypeDaoImpl implements TrainingTypeDao {
     }
 
     @Override
-    public Optional<TrainingTypeEntity> findByName(TrainingTypeName name) {
+    public Optional<TrainingType> findByName(TrainingTypeName name) {
         return entityManager
                 .createQuery("SELECT t FROM TrainingType t WHERE t.trainingTypeName = :name", TrainingTypeEntity.class)
                 .setParameter("name", name)
                 .getResultStream()
-                .findFirst();
+                .findFirst()
+                .map(TrainingTypeEntityMapper::toModel);
     }
 
     @Override
-    public List<TrainingTypeEntity> findAll() {
+    public List<TrainingType> findAll() {
         return entityManager
                 .createQuery("SELECT t FROM TrainingType t ORDER BY t.trainingTypeName", TrainingTypeEntity.class)
-                .getResultList();
+                .getResultStream()
+                .map(TrainingTypeEntityMapper::toModel)
+                .toList();
     }
 }

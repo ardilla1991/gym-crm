@@ -1,4 +1,4 @@
-package com.epam.training.gym.service.mapper;
+package com.epam.training.gym.persistence.mapper;
 
 import com.epam.training.gym.model.User;
 import com.epam.training.gym.persistence.entity.UserEntity;
@@ -11,7 +11,7 @@ public final class UserEntityMapper {
 
     /**
      * All fields except the password: a model read from the database never carries it.
-     * The services check passwords on the entities; registration returns the generated password itself.
+     * Passwords are checked in the database (UserDao.matchesPassword); registration returns the generated one itself.
      */
     public static User toModel(UserEntity entity) {
         return User.builder()

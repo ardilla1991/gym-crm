@@ -17,7 +17,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @ToString
-public class TrainerEntity implements ProfileEntity {
+public class TrainerEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

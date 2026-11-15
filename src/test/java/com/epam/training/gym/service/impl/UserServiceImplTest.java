@@ -1,7 +1,8 @@
 package com.epam.training.gym.service.impl;
 
+import com.epam.training.gym.model.User;
 import com.epam.training.gym.model.auth.Credentials;
-import com.epam.training.gym.persistence.entity.UserEntity;
+import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.InvalidInputException;
@@ -14,7 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -29,42 +31,45 @@ public class UserServiceImplTest {
     @Mock
     private UserAuthenticator userAuthenticator;
 
+    @Mock
+    private UserDao userDao;
+
     @InjectMocks
     private UserServiceImpl userService;
 
     @Test
-    void changePassword_rightCredentials_setsNewPassword() {
-        UserEntity user = UserEntity.builder().username(USERNAME).password(CURRENT_PASSWORD).build();
-        when(userAuthenticator.authenticate(CREDENTIALS)).thenReturn(user);
+    void changePassword_rightCredentials_savesNewPassword() {
+        User user = User.builder().id(1L).username(USERNAME).build();
+        when(userDao.findByUsername(USERNAME)).thenReturn(Optional.of(user));
 
         userService.changePassword(CREDENTIALS, NEW_PASSWORD);
 
-        assertEquals(NEW_PASSWORD, user.getPassword());
+        verify(userAuthenticator).authenticate(CREDENTIALS);
+        verify(userDao).updatePassword(user, NEW_PASSWORD);
     }
 
     @Test
     void changePassword_wrongCredentials_throws() {
-        when(userAuthenticator.authenticate(CREDENTIALS)).thenThrow(new AuthenticationException());
+        doThrow(new AuthenticationException()).when(userAuthenticator).authenticate(CREDENTIALS);
 
         assertThrows(AuthenticationException.class, () -> userService.changePassword(CREDENTIALS, NEW_PASSWORD));
+
+        verify(userDao, never()).updatePassword(any(), any());
     }
 
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" ", "          ", "336", "123456789", "12345678901"})
     void changePassword_invalidNewPassword_throwsAndKeepsOldPassword(String newPassword) {
-        UserEntity user = UserEntity.builder().username(USERNAME).password(CURRENT_PASSWORD).build();
-        when(userAuthenticator.authenticate(CREDENTIALS)).thenReturn(user);
-
         assertThrows(InvalidInputException.class, () -> userService.changePassword(CREDENTIALS, newPassword));
 
-        assertEquals(CURRENT_PASSWORD, user.getPassword());
+        verify(userDao, never()).updatePassword(any(), any());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {" ", "336", "12345678901"})
     void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword(String newPassword) {
-        when(userAuthenticator.authenticate(CREDENTIALS)).thenThrow(new AuthenticationException());
+        doThrow(new AuthenticationException()).when(userAuthenticator).authenticate(CREDENTIALS);
 
         assertThrows(AuthenticationException.class, () -> userService.changePassword(CREDENTIALS, newPassword));
     }

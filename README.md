@@ -11,8 +11,8 @@ One Maven module; the layers are packages.
 |---------------|---------------------------------------------------------------------------|---------------------------------|
 | `api.rest`    | REST controllers, DTOs and their mappers, error handling, logging filters | DTOs outside, models inside     |
 | `api`         | `Main`, `GymApplication` (embedded Tomcat), `GymFacade`                   | models                          |
-| `service`     | business logic, model validation; mappers in `service.mapper`             | models outside, entities inside |
-| `persistence` | DAOs; JPA entities in `persistence.entity`                                | entities                        |
+| `service`     | business logic, model validation                                          | models                          |
+| `persistence` | DAOs; JPA entities and mappers                                            | models outside, entities inside |
 | `model`       | models: Lombok and validation, no JPA                                     | —                               |
 | `config`      | Spring and database configuration                                         | —                               |
 
@@ -175,12 +175,15 @@ Not covered on purpose: `Main` and `GymApplication.await()` (they start and bloc
 - PUT replaces the whole profile: an optional field that is not sent becomes empty.
 - Training criteria: dates are inclusive, names are compared with the first name, case-insensitive.
 - Deleting a trainee deletes its trainings through `CascadeType.REMOVE`.
+- Each layer works with its own types: services see only models, entities never leave `persistence`.
+  DAOs convert models and entities with the mappers in `persistence.mapper`, and every change is an explicit DAO call.
 - Validation: DTOs in the controllers, models in the services after authentication, column limits in the entities;
   the limits are shared through `FieldLimits`, so a valid value always fits its column.
 - Names allow only Latin letters, spaces, hyphens and apostrophes (`@PersonName`): the username is built from them
   and must work in HTTP Basic and in URL paths.
 - The password is checked twice: by `AuthenticationInterceptor` (401 before 400 or 403) and by the services,
-  which must be safe without REST too.
+  which must be safe without REST too. Both checks run in the database (`UserDao.matchesPassword`):
+  models read from the database have no password.
 - Passwords are stored as plain text: a known limitation; real systems store a salted slow hash (PBKDF2, BCrypt).
 - Two registrations of the same name at the same moment: the unique index lets one in, the other gets 409.
 - Swagger comes from springdoc, configured by hand in `WebConfig`; the application does not use Spring Boot.

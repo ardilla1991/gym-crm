@@ -1,7 +1,10 @@
 package com.epam.training.gym.persistence.dao.impl;
 
+import com.epam.training.gym.model.Trainer;
 import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.entity.TrainerEntity;
+import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
+import com.epam.training.gym.persistence.mapper.TrainerEntityMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
@@ -25,15 +28,18 @@ public class TrainerDaoImpl implements TrainerDao {
     }
 
     @Override
-    public TrainerEntity save(TrainerEntity trainer) {
-        entityManager.persist(trainer);
-        log.debug("Trainer saved: id={}", trainer.getId());
+    public Trainer save(Trainer trainer) {
+        TrainingTypeEntity specialization =
+                entityManager.getReference(TrainingTypeEntity.class, trainer.getSpecialization().getId());
+        TrainerEntity entity = TrainerEntityMapper.toNewEntity(trainer, specialization);
+        entityManager.persist(entity);
+        log.debug("Trainer saved: id={}", entity.getId());
 
-        return trainer;
+        return TrainerEntityMapper.toModel(entity);
     }
 
     @Override
-    public Optional<TrainerEntity> findByUsername(String username) {
+    public Optional<Trainer> findByUsername(String username) {
         return entityManager
                 .createQuery("""
                         SELECT t FROM Trainer t
@@ -43,11 +49,12 @@ public class TrainerDaoImpl implements TrainerDao {
                         """, TrainerEntity.class)
                 .setParameter("username", username)
                 .getResultStream()
-                .findFirst();
+                .findFirst()
+                .map(TrainerEntityMapper::toModel);
     }
 
     @Override
-    public List<TrainerEntity> findByUsernames(Collection<String> usernames) {
+    public List<Trainer> findByUsernames(Collection<String> usernames) {
         if (usernames.isEmpty()) {
             return List.of();   // no need to query the database
         }
@@ -59,11 +66,13 @@ public class TrainerDaoImpl implements TrainerDao {
                         WHERE t.user.username IN :usernames
                         """, TrainerEntity.class)
                 .setParameter("usernames", usernames)
-                .getResultList();
+                .getResultStream()
+                .map(TrainerEntityMapper::toModel)
+                .toList();
     }
 
     @Override
-    public List<TrainerEntity> findActiveNotAssignedToTrainee(String traineeUsername) {
+    public List<Trainer> findActiveNotAssignedToTrainee(String traineeUsername) {
         return entityManager.createQuery("""
                     SELECT tr FROM Trainer tr
                     JOIN FETCH tr.user
@@ -74,11 +83,13 @@ public class TrainerDaoImpl implements TrainerDao {
                         WHERE te.user.username = :username)
                     """, TrainerEntity.class)
                 .setParameter("username", traineeUsername)
-                .getResultList();
+                .getResultStream()
+                .map(TrainerEntityMapper::toModel)
+                .toList();
     }
 
     @Override
-    public Optional<TrainerEntity> findByUsernameWithTrainees(String username) {
+    public Optional<Trainer> findByUsernameWithTrainees(String username) {
         return entityManager.createQuery("""
                     SELECT t FROM Trainer t
                     JOIN FETCH t.user
@@ -89,7 +100,18 @@ public class TrainerDaoImpl implements TrainerDao {
                     """, TrainerEntity.class)
                 .setParameter("username", username)
                 .getResultStream()
-                .findFirst();
+                .findFirst()
+                .map(TrainerEntityMapper::toModelWithTrainees);
     }
 
+    @Override
+    public Trainer update(Trainer trainer) {
+        TrainerEntity entity = entityManager.find(TrainerEntity.class, trainer.getId());
+        entity.getUser().setFirstName(trainer.getUser().getFirstName());
+        entity.getUser().setLastName(trainer.getUser().getLastName());
+        entity.getUser().setActive(trainer.getUser().isActive());
+        log.debug("Trainer updated: id={}", entity.getId());
+
+        return TrainerEntityMapper.toModel(entity);
+    }
 }
