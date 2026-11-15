@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -58,6 +59,16 @@ public class EntityValidatorTest {
                 assertThrows(ConstraintViolationException.class, () -> entityValidator.validate(trainer));
 
         assertEquals(Set.of("specialization"), fields(exception));
+    }
+
+    @Test
+    void validate_futureDateOfBirth_fails() {
+        Trainee trainee = Trainee.builder().user(user("John", "Smith")).dateOfBirth(LocalDate.now().plusDays(1)).build();
+
+        ConstraintViolationException exception =
+                assertThrows(ConstraintViolationException.class, () -> entityValidator.validate(trainee));
+
+        assertEquals(Set.of("dateOfBirth"), fields(exception));
     }
 
     private static User user(String firstName, String lastName) {

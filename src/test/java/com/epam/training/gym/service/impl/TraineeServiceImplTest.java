@@ -88,6 +88,23 @@ public class TraineeServiceImplTest {
     }
 
     @Test
+    void create_returnsGeneratedPassword() {
+        Trainee trainee = newTrainee();
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setUsername("John.Smith");
+            user.setPassword("Gen3rated1");
+            return null;
+        }).when(newUserDataGenerator).fillNewUserData(trainee.getUser());
+        when(traineeDao.save(any(TraineeEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Trainee result = traineeService.create(trainee);
+
+        // Registration is the only result with a password: the user needs it to sign in
+        assertEquals("Gen3rated1", result.getUser().getPassword());
+    }
+
+    @Test
     void create_invalidTrainee_isNotSaved() {
         Trainee trainee = newTrainee();
         doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(trainee);
@@ -226,6 +243,7 @@ public class TraineeServiceImplTest {
         Trainee result = traineeService.getProfile(VALID_CREDENTIALS, "Mary.Jones");
 
         assertEquals("Mary.Jones", result.getUser().getUsername());
+        assertNull(result.getUser().getPassword());     // another user's password never leaves the service
         verify(userAuthenticator).authenticate(VALID_CREDENTIALS);
     }
 

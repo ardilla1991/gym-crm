@@ -92,7 +92,10 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer, TrainerE
         TrainerEntity saved = trainerDao.save(TrainerEntityMapper.toNewEntity(trainer, specialization));
         log.info("Trainer created: id={}, username={}", saved.getId(), saved.getUser().getUsername());
 
-        return TrainerEntityMapper.toModel(saved);
+        Trainer created = TrainerEntityMapper.toModel(saved);
+        // The mapper never copies the password; registration returns the generated one to the new user
+        created.getUser().setPassword(trainer.getUser().getPassword());
+        return created;
     }
 
     @Override

@@ -80,6 +80,25 @@ public class TrainerServiceImplTest {
     }
 
     @Test
+    void create_returnsGeneratedPassword() {
+        Trainer trainer = newTrainer(TrainingTypeName.ZUMBA);
+        when(trainingTypeDao.findByName(TrainingTypeName.ZUMBA))
+                .thenReturn(Optional.of(new TrainingTypeEntity(3L, TrainingTypeName.ZUMBA)));
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setUsername("Anna.Lee");
+            user.setPassword("Gen3rated1");
+            return null;
+        }).when(newUserDataGenerator).fillNewUserData(trainer.getUser());
+        when(trainerDao.save(any(TrainerEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Trainer result = trainerService.create(trainer);
+
+        // Registration is the only result with a password: the user needs it to sign in
+        assertEquals("Gen3rated1", result.getUser().getPassword());
+    }
+
+    @Test
     void create_unknownTrainingType_isNotSaved() {
         Trainer trainer = newTrainer(TrainingTypeName.ZUMBA);
         when(trainingTypeDao.findByName(TrainingTypeName.ZUMBA)).thenReturn(Optional.empty());
@@ -222,6 +241,7 @@ public class TrainerServiceImplTest {
         Trainer result = trainerService.getProfile(traineeCredentials, USERNAME);
 
         assertEquals(USERNAME, result.getUser().getUsername());
+        assertNull(result.getUser().getPassword());     // another user's password never leaves the service
         verify(userAuthenticator).authenticate(traineeCredentials);
     }
 

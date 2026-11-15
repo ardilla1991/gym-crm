@@ -2,6 +2,7 @@ package com.epam.training.gym.model;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ public class Trainee implements UserProfile {
 
     /** Personal data: excluded from toString() so it does not end up in logs. */
     @ToString.Exclude
+    @Past
     private LocalDate dateOfBirth;
 
     /** Personal data: excluded from toString() so it does not end up in logs. */

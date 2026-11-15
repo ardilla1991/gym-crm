@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class UserEntityMapperTest {
 
     @Test
-    void toModel_copiesAllFields() {
+    void toModel_copiesAllFieldsButPassword() {
         UserEntity entity = UserEntity.builder()
                 .id(7L).firstName("John").lastName("Smith")
                 .username("John.Smith").password("Hq5sW1dF6y").isActive(true)
@@ -23,7 +23,7 @@ class UserEntityMapperTest {
         assertEquals("John", model.getFirstName());
         assertEquals("Smith", model.getLastName());
         assertEquals("John.Smith", model.getUsername());
-        assertEquals("Hq5sW1dF6y", model.getPassword());
+        assertNull(model.getPassword());             // a model read from the database never carries the password
         assertTrue(model.isActive());
     }
 

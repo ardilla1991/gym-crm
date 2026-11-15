@@ -73,7 +73,10 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee, TraineeE
         TraineeEntity saved = traineeDao.save(TraineeEntityMapper.toNewEntity(trainee));
         log.info("Trainee created: id={}, username={}", saved.getId(), saved.getUser().getUsername());
 
-        return TraineeEntityMapper.toModel(saved);
+        Trainee created = TraineeEntityMapper.toModel(saved);
+        // The mapper never copies the password; registration returns the generated one to the new user
+        created.getUser().setPassword(trainee.getUser().getPassword());
+        return created;
     }
 
     @Override
