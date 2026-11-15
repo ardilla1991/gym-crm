@@ -24,12 +24,14 @@ public class UserAuthenticator {
         this.userDao = userDao;
     }
 
+    /** True if a user with this username exists and the password matches. */
+    public boolean matches(Credentials credentials) {
+        return userDao.matchesPassword(credentials.username(), credentials.password());
+    }
+
     /** @throws AuthenticationException if the username or the password is wrong */
     public void authenticate(Credentials credentials) {
-        boolean valid = userDao.findByUsername(credentials.username())
-                .filter(user -> user.getPassword().equals(credentials.password()))
-                .isPresent();
-        if (!valid) {
+        if (!matches(credentials)) {
             log.warn("User authentication failed: username={}", credentials.username());
             throw new AuthenticationException();
         }

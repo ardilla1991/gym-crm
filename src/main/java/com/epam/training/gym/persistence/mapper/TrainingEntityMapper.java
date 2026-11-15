@@ -1,4 +1,4 @@
-package com.epam.training.gym.service.mapper;
+package com.epam.training.gym.persistence.mapper;
 
 import com.epam.training.gym.model.Training;
 import com.epam.training.gym.persistence.entity.TraineeEntity;
@@ -26,8 +26,8 @@ public final class TrainingEntityMapper {
     }
 
     /**
-     * A new row for a new training. The trainee, the trainer and the type are entities
-     * loaded by the service; from the model only the name, date and duration are taken.
+     * A new row for a new training. The trainee, the trainer and the type are existing rows
+     * found by the DAO; from the model only the name, date and duration are taken.
      */
     public static TrainingEntity toNewEntity(Training model, TraineeEntity trainee, TrainerEntity trainer,
                                              TrainingTypeEntity trainingType) {

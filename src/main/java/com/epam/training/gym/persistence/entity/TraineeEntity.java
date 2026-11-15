@@ -20,7 +20,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @ToString
-public class TraineeEntity implements ProfileEntity {
+public class TraineeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

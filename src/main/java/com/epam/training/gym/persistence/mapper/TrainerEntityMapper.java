@@ -1,4 +1,4 @@
-package com.epam.training.gym.service.mapper;
+package com.epam.training.gym.persistence.mapper;
 
 import com.epam.training.gym.model.Trainer;
 import com.epam.training.gym.persistence.entity.TrainerEntity;
@@ -34,7 +34,7 @@ public final class TrainerEntityMapper {
     }
 
     /**
-     * A new row for a new trainer. The specialization is the entity loaded by the service:
+     * A new row for a new trainer. The specialization is an existing row found by the DAO:
      * training types are never created from the model.
      */
     public static TrainerEntity toNewEntity(Trainer model, TrainingTypeEntity specialization) {

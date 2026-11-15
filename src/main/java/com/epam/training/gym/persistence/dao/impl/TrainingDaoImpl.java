@@ -1,10 +1,14 @@
 package com.epam.training.gym.persistence.dao.impl;
 
+import com.epam.training.gym.model.Training;
 import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.persistence.dao.TrainingDao;
+import com.epam.training.gym.persistence.entity.TraineeEntity;
 import com.epam.training.gym.persistence.entity.TrainerEntity;
 import com.epam.training.gym.persistence.entity.TrainingEntity;
+import com.epam.training.gym.persistence.entity.TrainingTypeEntity;
+import com.epam.training.gym.persistence.mapper.TrainingEntityMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.*;
@@ -30,15 +34,19 @@ public class TrainingDaoImpl implements TrainingDao {
 
 
     @Override
-    public TrainingEntity save(TrainingEntity training) {
-        entityManager.persist(training);
-        log.debug("Training saved: id={}", training.getId());
+    public Training save(Training training) {
+        TrainingEntity entity = TrainingEntityMapper.toNewEntity(training,
+                entityManager.getReference(TraineeEntity.class, training.getTrainee().getId()),
+                entityManager.getReference(TrainerEntity.class, training.getTrainer().getId()),
+                entityManager.getReference(TrainingTypeEntity.class, training.getTrainingType().getId()));
+        entityManager.persist(entity);
+        log.debug("Training saved: id={}", entity.getId());
 
-        return training;
+        return TrainingEntityMapper.toModel(entity);
     }
 
     @Override
-    public List<TrainingEntity> findTraineeTrainings(String traineeUsername, TraineeTrainingCriteria criteria) {
+    public List<Training> findTraineeTrainings(String traineeUsername, TraineeTrainingCriteria criteria) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<TrainingEntity> query = cb.createQuery(TrainingEntity.class);
         Root<TrainingEntity> training = query.from(TrainingEntity.class);
@@ -62,11 +70,13 @@ public class TrainingDaoImpl implements TrainingDao {
                 .where(conditions.toArray(new Predicate[0]))
                 .orderBy(cb.asc(training.get("trainingDate")));
 
-        return entityManager.createQuery(query).getResultList();
+        return entityManager.createQuery(query).getResultStream()
+                .map(TrainingEntityMapper::toModel)
+                .toList();
     }
 
     @Override
-    public List<TrainingEntity> findTrainerTrainings(String trainerUsername, TrainerTrainingCriteria criteria) {
+    public List<Training> findTrainerTrainings(String trainerUsername, TrainerTrainingCriteria criteria) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<TrainingEntity> query = cb.createQuery(TrainingEntity.class);
         Root<TrainingEntity> training = query.from(TrainingEntity.class);
@@ -84,7 +94,9 @@ public class TrainingDaoImpl implements TrainingDao {
                 .where(conditions.toArray(new Predicate[0]))
                 .orderBy(cb.asc(training.get("trainingDate")));
 
-        return entityManager.createQuery(query).getResultList();
+        return entityManager.createQuery(query).getResultStream()
+                .map(TrainingEntityMapper::toModel)
+                .toList();
     }
 
     /** Date filters shared by both queries; both dates are inclusive. */

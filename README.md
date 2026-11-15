@@ -9,8 +9,8 @@ One Maven module; the layers are packages.
 | Package       | What is there                                                        | Works with                         |
 |---------------|----------------------------------------------------------------------|------------------------------------|
 | `api`         | `GymFacade`, `Main`                                                  | models                             |
-| `service`     | business logic, model validation; mappers in `service.mapper`        | models outside, entities inside    |
-| `persistence` | DAOs; JPA entities in `persistence.entity`                           | entities                           |
+| `service`     | business logic, model validation                                     | models                             |
+| `persistence` | DAOs; JPA entities and mappers                                       | models outside, entities inside    |
 | `model`       | models: Lombok and validation, no JPA                                | —                                  |
 | `config`      | Spring and database configuration                                    | —                                  |
 
@@ -72,8 +72,9 @@ Every operation except creating a profile takes the `Credentials` (username and 
 - Deleting a trainee deletes the trainee's trainings through the JPA cascade (`CascadeType.REMOVE`);
   for many trainings `ON DELETE CASCADE` in the database would be faster.
 - Trainings and profiles are loaded with `JOIN FETCH` in one query to avoid the N+1 problem.
-- Models are separate from the JPA entities and are converted by the mappers in `service.mapper`.
-  An update changes the loaded entity, and Hibernate saves it at commit (dirty checking).
+- Each layer works with its own types: services see only models, entities never leave `persistence`.
+  DAOs convert models and entities with the mappers in `persistence.mapper`, and every change is an explicit DAO call.
+- Passwords are checked in the database (`UserDao.matchesPassword`): models read from the database have no password.
 - Validation: field rules are annotations on the models, checked by the services before any database access;
   business rules are checked in the services; the entities only have column constraints.
 
