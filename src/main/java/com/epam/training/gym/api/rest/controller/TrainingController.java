@@ -52,8 +52,9 @@ public class TrainingController {
     @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
     @ApiResponse(responseCode = "403", description = "traineeUsername is not the signed-in user")
     @ApiResponse(responseCode = "404", description = "The trainer does not exist")
+    @ApiResponse(responseCode = "409", description = "The trainer is not active")
     public void add(Credentials credentials, @Valid @RequestBody AddTrainingRequest request) {
         AccessChecker.requireOwner(credentials, request.traineeUsername());
-        facade.addTraining(credentials, request.trainerUsername(), TrainingMapper.toEntity(request));
+        facade.addTraining(credentials, request.trainerUsername(), TrainingMapper.toModel(request));
     }
 }

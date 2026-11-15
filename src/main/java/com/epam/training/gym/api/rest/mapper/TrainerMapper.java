@@ -8,14 +8,14 @@ import com.epam.training.gym.model.User;
 import java.util.Comparator;
 import java.util.List;
 
-/** Converts trainer DTOs to entities and back. */
+/** Converts trainer request DTOs to service models and models to response DTOs. */
 public final class TrainerMapper {
 
     private TrainerMapper() {
     }
 
     /** Trainer Registration: only the name of the specialization is set; the service takes the type from the database. */
-    public static Trainer toEntity(TrainerRegistrationRequest request) {
+    public static Trainer toModel(TrainerRegistrationRequest request) {
         return Trainer.builder()
                 .specialization(new TrainingType(null, request.specialization()))
                 .user(User.builder().firstName(request.firstName()).lastName(request.lastName()).build())
@@ -23,7 +23,7 @@ public final class TrainerMapper {
     }
 
     /** Update Trainer Profile; the specialization is read-only and is not set. */
-    public static Trainer toEntity(UpdateTrainerRequest request) {
+    public static Trainer toModel(UpdateTrainerRequest request) {
         return Trainer.builder()
                 .user(User.builder()
                         .firstName(request.firstName())

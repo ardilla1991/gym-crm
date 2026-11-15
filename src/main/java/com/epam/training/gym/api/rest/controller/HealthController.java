@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Shows that the application is up; does not require authentication. */
 @RestController
-@RequestMapping(ApiPaths.API_V1 + "/health")
+@RequestMapping(ApiPaths.HEALTH)
 @Tag(name = "Health", description = "Application status")
 public class HealthController {
 

@@ -9,14 +9,16 @@ public final class UserEntityMapper {
     private UserEntityMapper() {
     }
 
-    /** All fields, including the password: services check it and return it after registration. */
+    /**
+     * All fields except the password: a model read from the database never carries it.
+     * The services check passwords on the entities; registration returns the generated password itself.
+     */
     public static User toModel(UserEntity entity) {
         return User.builder()
                 .id(entity.getId())
                 .firstName(entity.getFirstName())
                 .lastName(entity.getLastName())
                 .username(entity.getUsername())
-                .password(entity.getPassword())
                 .isActive(entity.isActive())
                 .build();
     }

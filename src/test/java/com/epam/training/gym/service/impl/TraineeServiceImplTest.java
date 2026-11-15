@@ -10,6 +10,7 @@ import com.epam.training.gym.persistence.entity.*;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidInputException;
 import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -40,7 +40,6 @@ public class TraineeServiceImplTest {
 
     private static final String USERNAME = "John.Smith";
     private static final String CURRENT_PASSWORD = "abcdef1234";
-    private static final String NEW_PASSWORD = "newPass123";
 
     private static final Credentials VALID_CREDENTIALS = new Credentials(USERNAME, CURRENT_PASSWORD);
     private static final Credentials WRONG_PASSWORD_CREDENTIALS = new Credentials(USERNAME, "wrong");
@@ -89,6 +88,23 @@ public class TraineeServiceImplTest {
     }
 
     @Test
+    void create_returnsGeneratedPassword() {
+        Trainee trainee = newTrainee();
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setUsername("John.Smith");
+            user.setPassword("Gen3rated1");
+            return null;
+        }).when(newUserDataGenerator).fillNewUserData(trainee.getUser());
+        when(traineeDao.save(any(TraineeEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Trainee result = traineeService.create(trainee);
+
+        // Registration is the only result with a password: the user needs it to sign in
+        assertEquals("Gen3rated1", result.getUser().getPassword());
+    }
+
+    @Test
     void create_invalidTrainee_isNotSaved() {
         Trainee trainee = newTrainee();
         doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(trainee);
@@ -129,47 +145,23 @@ public class TraineeServiceImplTest {
         assertFalse(traineeService.matchCredentials(new Credentials("User.Name", CURRENT_PASSWORD)));
     }
 
-    // ---------- changePassword ----------
+    // ---------- authenticate ----------
 
     @Test
-    void changePassword_rightCredentials_setsNewPassword() {
-        TraineeEntity trainee = existingTrainee(true);
-        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
-
-        traineeService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD);
-
-        assertEquals(NEW_PASSWORD, trainee.getUser().getPassword());
-    }
-
-    @Test
-    void changePassword_wrongPassword_throwsAndKeepsOldPassword() {
-        TraineeEntity trainee = existingTrainee(true);
-        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
-
-        assertThrows(AuthenticationException.class,
-                () -> traineeService.changePassword(WRONG_PASSWORD_CREDENTIALS, NEW_PASSWORD));
-
-        assertEquals(CURRENT_PASSWORD, trainee.getUser().getPassword());
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" ", "\t"})
-    void changePassword_blankNewPassword_throwsAndKeepsOldPassword(String newPassword) {
-        TraineeEntity trainee = existingTrainee(true);
-        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
-
-        assertThrows(IllegalArgumentException.class, () -> traineeService.changePassword(VALID_CREDENTIALS, newPassword));
-
-        assertEquals(CURRENT_PASSWORD, trainee.getUser().getPassword());
-    }
-
-    @Test
-    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword() {
+    void authenticate_rightPassword_returnsOwnProfileWithoutPassword() {
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
 
-        assertThrows(AuthenticationException.class,
-                () -> traineeService.changePassword(WRONG_PASSWORD_CREDENTIALS, " "));
+        Trainee result = traineeService.authenticate(VALID_CREDENTIALS);
+
+        assertEquals(USERNAME, result.getUser().getUsername());
+        assertNull(result.getUser().getPassword());
+    }
+
+    @Test
+    void authenticate_wrongPassword_throws() {
+        when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainee(true)));
+
+        assertThrows(AuthenticationException.class, () -> traineeService.authenticate(WRONG_PASSWORD_CREDENTIALS));
     }
 
     // ---------- changeActiveStatus ----------
@@ -240,6 +232,7 @@ public class TraineeServiceImplTest {
         Trainee result = traineeService.getProfile(VALID_CREDENTIALS, "Mary.Jones");
 
         assertEquals("Mary.Jones", result.getUser().getUsername());
+        assertNull(result.getUser().getPassword());     // another user's password never leaves the service
         verify(userAuthenticator).authenticate(VALID_CREDENTIALS);
     }
 
@@ -435,7 +428,7 @@ public class TraineeServiceImplTest {
         trainee.getTrainers().add(oldTrainer);
         when(traineeDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainee));
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(InvalidInputException.class,
                 () -> traineeService.updateTrainers(VALID_CREDENTIALS, trainerUsernames));
 
         verify(trainerDao, never()).findByUsernames(any());

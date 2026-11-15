@@ -4,9 +4,9 @@ import com.epam.training.gym.model.TrainingTypeName;
 
 import java.time.LocalDate;
 
-/**  Trainer's Trainings List.
- * Search criteria (Period From, Period To, Trainer Name, Training Type) come as query parameters:
- * ?periodFrom=2026-01-01&periodTo=2026-03-31&trainerName=Anna&trainingType=YOGA
+/** Trainer's Trainings List.
+ * Search criteria (Period From, Period To, Trainee Name) come as query parameters:
+ * ?periodFrom=2026-01-01&periodTo=2026-03-31&traineeName=John
  * The controller builds TrainerTrainingCriteria from them, so no separate request DTO is needed.
  */
 public record TrainerTrainingResponse(

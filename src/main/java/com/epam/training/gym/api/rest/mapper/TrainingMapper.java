@@ -10,7 +10,7 @@ import com.epam.training.gym.model.User;
 
 import java.util.List;
 
-/** Converts training DTOs to entities and back. */
+/** Converts training request DTOs to service models and models to response DTOs. */
 public class TrainingMapper {
 
     private TrainingMapper() {
@@ -45,7 +45,7 @@ public class TrainingMapper {
     }
 
     /** Add Training: the trainee, the trainer and the type are set by the service. */
-    public static Training toEntity(AddTrainingRequest request) {
+    public static Training toModel(AddTrainingRequest request) {
         return Training.builder()
                 .trainingName(request.trainingName())
                 .trainingDate(request.trainingDate())

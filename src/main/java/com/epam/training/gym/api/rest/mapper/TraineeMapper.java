@@ -7,14 +7,14 @@ import com.epam.training.gym.model.User;
 import java.util.Comparator;
 import java.util.List;
 
-/** Converts trainee DTOs to entities and back. */
+/** Converts trainee request DTOs to service models and models to response DTOs. */
 public final  class TraineeMapper {
 
     private TraineeMapper() {
     }
 
     /** Trainee Registration. */
-    public static Trainee toEntity(TraineeRegistrationRequest request) {
+    public static Trainee toModel(TraineeRegistrationRequest request) {
         return Trainee.builder()
                 .dateOfBirth(request.dateOfBirth())
                 .address(request.address())
@@ -23,7 +23,7 @@ public final  class TraineeMapper {
     }
 
     /** Update Trainee Profile ; the service copies only the allowed fields. */
-    public static Trainee toEntity(UpdateTraineeRequest request) {
+    public static Trainee toModel(UpdateTraineeRequest request) {
         return Trainee.builder()
                 .dateOfBirth(request.dateOfBirth())
                 .address(request.address())

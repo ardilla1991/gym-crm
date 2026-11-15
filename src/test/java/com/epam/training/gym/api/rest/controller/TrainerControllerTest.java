@@ -7,7 +7,6 @@ import com.epam.training.gym.api.rest.auth.TestAuth;
 import com.epam.training.gym.api.rest.dto.RegistrationResponse;
 import com.epam.training.gym.api.rest.dto.TrainerProfileResponse;
 import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
-import com.epam.training.gym.api.rest.mapper.TrainerMapper;
 import com.epam.training.gym.model.Trainer;
 import com.epam.training.gym.model.TrainingType;
 import com.epam.training.gym.model.TrainingTypeName;
@@ -101,7 +100,8 @@ public class TrainerControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "{\"firstName\": \"Anna\", \"lastName\": \"Lee\"}",                              // no specialization
-            "{\"firstName\": \"\", \"lastName\": \"Lee\", \"specialization\": \"YOGA\"}"      // blank first name
+            "{\"firstName\": \"\", \"lastName\": \"Lee\", \"specialization\": \"YOGA\"}",     // blank first name
+            "{\"firstName\": \"Anna\", \"lastName\": \"Lee:X\", \"specialization\": \"YOGA\"}" // ':' breaks HTTP Basic
     })
     void register_invalidRequest_returnsBadRequest(String json) throws Exception {
         mockMvc.perform(post(TestPaths.TRAINERS).contentType(MediaType.APPLICATION_JSON).content(json))
@@ -131,7 +131,8 @@ public class TrainerControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertEquals(TrainerMapper.toProfileResponse(anna), JSON.readValue(body, TrainerProfileResponse.class));
+        assertEquals(new TrainerProfileResponse("Anna.Lee", "Anna", "Lee", TrainingTypeName.YOGA, true, List.of()),
+                JSON.readValue(body, TrainerProfileResponse.class));
     }
 
     @Test
@@ -153,7 +154,8 @@ public class TrainerControllerTest {
         assertFalse(newData.getUser().isActive());
         assertNull(newData.getSpecialization());     // read only: never taken from the request
 
-        assertEquals(TrainerMapper.toProfileResponse(updated), JSON.readValue(body, TrainerProfileResponse.class));
+        assertEquals(new TrainerProfileResponse("Anna.Lee", "Hanna", "Lee", TrainingTypeName.YOGA, true, List.of()),
+                JSON.readValue(body, TrainerProfileResponse.class));
     }
 
     @Test

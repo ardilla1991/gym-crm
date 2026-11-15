@@ -52,8 +52,9 @@ public class TraineeController {
             description = "No authentication. Returns the generated username and password.")
     @ApiResponse(responseCode = "201", description = "Trainee registered")
     @ApiResponse(responseCode = "400", description = "First or last name is missing, or the date of birth is not in the past")
+    @ApiResponse(responseCode = "409", description = "Another registration took the same username at the same moment: repeat the request")
     public RegistrationResponse register(@Valid @RequestBody TraineeRegistrationRequest request) {
-        Trainee created = facade.createTrainee(TraineeMapper.toEntity(request));
+        Trainee created = facade.createTrainee(TraineeMapper.toModel(request));
         return new RegistrationResponse(created.getUser().getUsername(), created.getUser().getPassword());
     }
 
@@ -102,7 +103,7 @@ public class TraineeController {
                                          @PathVariable("username") String username,
                                          @Valid @RequestBody UpdateTraineeRequest request) {
         AccessChecker.requireOwner(credentials, username);
-        Trainee updated = facade.updateTrainee(credentials, TraineeMapper.toEntity(request));
+        Trainee updated = facade.updateTrainee(credentials, TraineeMapper.toModel(request));
 
         return TraineeMapper.toProfileResponse(updated);
     }

@@ -16,8 +16,8 @@ public class TraineeMapperTest {
     private static final LocalDate BIRTH_DATE = LocalDate.of(1995, 4, 12);
 
     @Test
-    void toEntity_registration_copiesNamesDateAndAddress() {
-        Trainee trainee = TraineeMapper.toEntity(
+    void toModel_registration_copiesNamesDateAndAddress() {
+        Trainee trainee = TraineeMapper.toModel(
                 new TraineeRegistrationRequest("Emily", "Johnson", BIRTH_DATE, "12 Oak Street"));
 
         assertEquals("Emily", trainee.getUser().getFirstName());
@@ -28,8 +28,8 @@ public class TraineeMapperTest {
     }
 
     @Test
-    void toEntity_update_copiesActiveStatus() {
-        Trainee trainee = TraineeMapper.toEntity(
+    void toModel_update_copiesActiveStatus() {
+        Trainee trainee = TraineeMapper.toModel(
                 new UpdateTraineeRequest("Emily", "Brown", BIRTH_DATE, "1 Pine Road", false));
 
         assertEquals("Brown", trainee.getUser().getLastName());

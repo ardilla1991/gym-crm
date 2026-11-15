@@ -28,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TrainerDaoImplTest {
 
     private static final Long YOGA_ID = 2L;
+    private static final Long FITNESS_ID = 1L;
+    private static final Long ZUMBA_ID = 3L;
 
     @Autowired
     private TrainerDao trainerDao;
@@ -67,6 +69,19 @@ public class TrainerDaoImplTest {
     }
 
     @Test
+    void findByUsername_loadsUserAndSpecializationInSameQuery() {
+        trainerDao.save(newTrainer("Anna.Lee", yoga));
+        flushAndClear();
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        TrainerEntity found = trainerDao.findByUsername("Anna.Lee").orElseThrow();
+        found.getUser().getPassword();
+        found.getSpecialization().getTrainingTypeName();
+
+        assertEquals(1, queries.count());
+    }
+
+    @Test
     void findByUsernames_returnsOnlyRequestedTrainers() {
         trainerDao.save(newTrainer("Anna.Lee", yoga));
         trainerDao.save(newTrainer("Mark.Hill", yoga));
@@ -84,6 +99,25 @@ public class TrainerDaoImplTest {
     @Test
     void findByUsernames_emptyList_returnsEmptyList() {
         assertTrue(trainerDao.findByUsernames(List.of()).isEmpty());
+    }
+
+    @Test
+    void findByUsernames_loadsAllTrainersInOneQuery() {
+        // Different specializations: without JOIN FETCH each type would need its own SELECT
+        trainerDao.save(newTrainer("Anna.Lee", yoga));
+        trainerDao.save(newTrainer("Mark.Hill", entityManager.find(TrainingTypeEntity.class, FITNESS_ID)));
+        trainerDao.save(newTrainer("Bob.Ross", entityManager.find(TrainingTypeEntity.class, ZUMBA_ID)));
+        flushAndClear();
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        List<TrainerEntity> found = trainerDao.findByUsernames(List.of("Anna.Lee", "Mark.Hill", "Bob.Ross"));
+        found.forEach(trainer -> {
+            trainer.getUser().getUsername();
+            trainer.getSpecialization().getTrainingTypeName();
+        });
+
+        assertEquals(3, found.size());
+        assertEquals(1, queries.count());
     }
 
     @Test

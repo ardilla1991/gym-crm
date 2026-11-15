@@ -35,7 +35,12 @@ public class TrainerDaoImpl implements TrainerDao {
     @Override
     public Optional<TrainerEntity> findByUsername(String username) {
         return entityManager
-                .createQuery("SELECT t FROM Trainer t WHERE t.user.username = :username", TrainerEntity.class)
+                .createQuery("""
+                        SELECT t FROM Trainer t
+                        JOIN FETCH t.user
+                        JOIN FETCH t.specialization
+                        WHERE t.user.username = :username
+                        """, TrainerEntity.class)
                 .setParameter("username", username)
                 .getResultStream()
                 .findFirst();
@@ -47,7 +52,12 @@ public class TrainerDaoImpl implements TrainerDao {
             return List.of();   // no need to query the database
         }
         return entityManager
-                .createQuery("SELECT t FROM Trainer t WHERE t.user.username IN :usernames", TrainerEntity.class)
+                .createQuery("""
+                        SELECT t FROM Trainer t
+                        JOIN FETCH t.user
+                        JOIN FETCH t.specialization
+                        WHERE t.user.username IN :usernames
+                        """, TrainerEntity.class)
                 .setParameter("usernames", usernames)
                 .getResultList();
     }

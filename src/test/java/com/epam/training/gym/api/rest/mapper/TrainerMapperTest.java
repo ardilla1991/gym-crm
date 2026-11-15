@@ -14,8 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TrainerMapperTest {
 
     @Test
-    void toEntity_registration_setsSpecializationByNameOnly() {
-        Trainer trainer = TrainerMapper.toEntity(
+    void toModel_registration_setsSpecializationByNameOnly() {
+        Trainer trainer = TrainerMapper.toModel(
                 new TrainerRegistrationRequest("Anna", "Lee", TrainingTypeName.ZUMBA));
 
         assertEquals("Anna", trainer.getUser().getFirstName());
@@ -24,8 +24,8 @@ public class TrainerMapperTest {
     }
 
     @Test
-    void toEntity_update_hasNoSpecialization() {
-        Trainer trainer = TrainerMapper.toEntity(new UpdateTrainerRequest("Annie", "Lee", true));
+    void toModel_update_hasNoSpecialization() {
+        Trainer trainer = TrainerMapper.toModel(new UpdateTrainerRequest("Annie", "Lee", true));
 
         assertEquals("Annie", trainer.getUser().getFirstName());
         assertTrue(trainer.getUser().isActive());

@@ -13,6 +13,7 @@ import com.epam.training.gym.persistence.entity.TrainerEntity;
 import com.epam.training.gym.persistence.entity.UserEntity;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidInputException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.mapper.TraineeEntityMapper;
 import com.epam.training.gym.service.mapper.TrainerEntityMapper;
@@ -74,7 +75,10 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee, TraineeE
         TraineeEntity saved = traineeDao.save(TraineeEntityMapper.toNewEntity(trainee));
         log.info("Trainee created: id={}, username={}", saved.getId(), saved.getUser().getUsername());
 
-        return TraineeEntityMapper.toModel(saved);
+        Trainee created = TraineeEntityMapper.toModel(saved);
+        // The mapper never copies the password; registration returns the generated one to the new user
+        created.getUser().setPassword(trainee.getUser().getPassword());
+        return created;
     }
 
     @Override
@@ -172,14 +176,14 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee, TraineeE
     /** The list must not be null or empty and must have no blank or repeated usernames. */
     private static Set<String> validTrainerUsernames(List<String> trainerUsernames) {
         if (trainerUsernames == null || trainerUsernames.isEmpty()) {
-            throw new IllegalArgumentException("Trainers list must not be empty");
+            throw new InvalidInputException("Trainers list must not be empty");
         }
         if (trainerUsernames.stream().anyMatch(username -> username == null || username.isBlank())) {
-            throw new IllegalArgumentException("Trainer username must not be blank");
+            throw new InvalidInputException("Trainer username must not be blank");
         }
         Set<String> unique = new HashSet<>(trainerUsernames);
         if (unique.size() != trainerUsernames.size()) {
-            throw new IllegalArgumentException("Trainer usernames must not repeat: " + trainerUsernames);
+            throw new InvalidInputException("Trainer usernames must not repeat: " + trainerUsernames);
         }
         return unique;
     }

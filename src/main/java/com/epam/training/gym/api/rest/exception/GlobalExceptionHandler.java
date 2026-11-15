@@ -2,10 +2,12 @@ package com.epam.training.gym.api.rest.exception;
 
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidInputException;
 import com.epam.training.gym.service.exception.InvalidStateException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -49,6 +51,17 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.CONFLICT, e.getMessage());
     }
 
+    /**
+     * The data conflicts with data saved at the same moment, for example two registrations of the same name
+     * chose one username: the unique index rejected the second one. Repeating the request generates a new username.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataConflict(DataIntegrityViolationException e) {
+        // The database message has table and column names: it is logged, not sent to the client
+        log.warn("Data conflict: {}", e.getMostSpecificCause().getMessage());
+        return respond(HttpStatus.CONFLICT, "The data was changed at the same time by another request, please repeat");
+    }
+
     /** There is no trainee, trainer or training type with the given name. */
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(EntityNotFoundException e) {
@@ -89,15 +102,24 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.BAD_REQUEST, message);
     }
 
+    /** A service rule for the input failed, for example a repeated trainer in the list. */
+    @ExceptionHandler(InvalidInputException.class)
+    public ResponseEntity<ApiError> handleInvalidInput(InvalidInputException e) {
+        return respond(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
     /**
-     * Everything else. Spring MVC exceptions (unknown path, wrong HTTP method...) keep their own status;
+     * Everything else. Spring MVC exceptions (unknown path, wrong HTTP method...) keep their own status and headers;
      * unexpected exceptions become 500 without details, so no internals leak to the client.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception e) {
         if (e instanceof ErrorResponse springError) {
             String detail = springError.getBody().getDetail();
-            return respond(springError.getStatusCode(), Objects.requireNonNullElse(detail, e.getMessage()));
+            // Spring's own headers are kept: for example Allow for 405, which HTTP requires
+            return ResponseEntity.status(springError.getStatusCode())
+                    .headers(springError.getHeaders())
+                    .body(apiError(springError.getStatusCode(), Objects.requireNonNullElse(detail, e.getMessage())));
         }
         // The client gets no details, so the log must have them all; the line also has the transactionId
         log.error("Unexpected error", e);

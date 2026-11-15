@@ -1,0 +1,12 @@
+<configuration>
+    <!-- Tests only: warnings and errors, no SQL and no INFO. The application itself uses logback.xml -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level [txId=%X{transactionId}] %logger{20} - %replace(%msg){'[\r\n]+', ' '}%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

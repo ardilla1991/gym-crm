@@ -15,7 +15,8 @@ import java.util.Base64;
 /**
  * Fills a controller method parameter of type Credentials from the HTTP Basic Authorization header:
  * {@code Authorization: Basic base64(username:password)}.
- * Only checks that the header is present and well-formed; the password itself is checked by the services.
+ * Only checks that the header is present and well-formed; the password itself is checked
+ * by AuthenticationInterceptor before the controller and again by the services.
  */
 public class CredentialsArgumentResolver implements HandlerMethodArgumentResolver {
 

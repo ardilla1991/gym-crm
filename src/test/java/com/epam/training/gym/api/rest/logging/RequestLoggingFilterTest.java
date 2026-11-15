@@ -1,14 +1,19 @@
 package com.epam.training.gym.api.rest.logging;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.nio.charset.StandardCharsets;
-
-import org.springframework.mock.web.MockHttpServletRequest;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -42,16 +47,55 @@ public class RequestLoggingFilterTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {200, 404, 500})
-    void doFilter_anyStatus_reachesClient(int status) throws Exception {
-        // Each status is logged at its own level (INFO, WARN, ERROR); the client gets it unchanged
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/trainees/John.Smith/trainings");
-        request.setQueryString("periodFrom=2026-01-01");
-        MockHttpServletResponse response = new MockHttpServletResponse();
+    @CsvSource({"200, INFO", "404, WARN", "500, ERROR"})
+    void doFilter_anyStatus_reachesClientAndIsLoggedAtItsLevel(int status, String level) throws Exception {
+        // The log lines go to a list, not to the console: their levels are checked here
+        Logger filterLog = (Logger) LoggerFactory.getLogger(RequestLoggingFilter.class);
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        filterLog.addAppender(logged);
+        filterLog.setAdditive(false);
+        // Tests log only warnings (logback-test.xml): INFO is switched on here to check the level of a 200 call
+        Level previousLevel = filterLog.getLevel();
+        filterLog.setLevel(Level.INFO);
+        try {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/trainees/John.Smith/trainings");
+            request.setQueryString("periodFrom=2026-01-01");
+            MockHttpServletResponse response = new MockHttpServletResponse();
 
-        filter.doFilter(request, response, (req, res) -> ((HttpServletResponse) res).setStatus(status));
+            filter.doFilter(request, response, (req, res) -> ((HttpServletResponse) res).setStatus(status));
 
-        assertEquals(status, response.getStatus());
+            // The client gets the status unchanged; the final log line has the level of the status
+            assertEquals(status, response.getStatus());
+            ILoggingEvent finalLine = logged.list.get(logged.list.size() - 1);
+            assertEquals(Level.toLevel(level), finalLine.getLevel());
+        } finally {
+            filterLog.detachAppender(logged);
+            filterLog.setAdditive(true);
+            filterLog.setLevel(previousLevel);
+        }
+    }
+
+    @Test
+    void isPasswordChange_usesTheRouteChosenBySpring() {
+        // The raw URI has a path parameter, but Spring chose the password endpoint
+        MockHttpServletRequest withPathParameter = new MockHttpServletRequest("PUT", "/api/v1/login/password;probe=1");
+        withPathParameter.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/login/password");
+        MockHttpServletRequest registration = new MockHttpServletRequest("POST", "/api/v1/trainees");
+        registration.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/trainees");
+
+        assertTrue(RequestLoggingFilter.isPasswordChange(withPathParameter));
+        assertFalse(RequestLoggingFilter.isPasswordChange(registration));
+    }
+
+    @Test
+    void endpointForLog_keepsFiltersAndMasksPassword() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/trainees/Emily.Johnson/trainings");
+        request.addParameter("periodFrom", "2026-01-01");
+        request.addParameter("password", "Hq5sW1dF6y");
+
+        assertEquals("GET /api/v1/trainees/Emily.Johnson/trainings?periodFrom=2026-01-01&password=***",
+                RequestLoggingFilter.endpointForLog(request));
     }
 
     @Test

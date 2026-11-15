@@ -7,6 +7,7 @@ import com.epam.training.gym.api.rest.auth.TestAuth;
 import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
 import com.epam.training.gym.model.Training;
 import com.epam.training.gym.model.auth.Credentials;
+import com.epam.training.gym.model.validation.FieldLimits;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -95,6 +96,21 @@ public class TrainingControllerTest {
                     + " \"trainingName\": \"Morning yoga\", \"trainingDate\": \"2026-10-05\", \"trainingDuration\": 60}"
     })
     void add_invalidRequest_returnsBadRequest(String json) throws Exception {
+        mockMvc.perform(post(TestPaths.TRAININGS)
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(facade);
+    }
+
+    @Test
+    void add_tooLongTrainingName_returnsBadRequest() throws Exception {
+        String json = "{\"traineeUsername\": \"Emily.Johnson\", \"trainerUsername\": \"Anna.Lee\","
+                + " \"trainingName\": \"" + "a".repeat(FieldLimits.TRAINING_NAME_MAX + 1) + "\","
+                + " \"trainingDate\": \"2026-10-05\", \"trainingDuration\": 60}";
+
         mockMvc.perform(post(TestPaths.TRAININGS)
                         .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)

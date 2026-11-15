@@ -50,8 +50,9 @@ public class TrainerController {
             description = "No authentication. Returns the generated username and password.")
     @ApiResponse(responseCode = "201", description = "Trainer registered")
     @ApiResponse(responseCode = "400", description = "A name or the specialization is missing, or the specialization is unknown")
+    @ApiResponse(responseCode = "409", description = "Another registration took the same username at the same moment: repeat the request")
     public RegistrationResponse register(@Valid @RequestBody TrainerRegistrationRequest request) {
-        Trainer created = facade.createTrainer(TrainerMapper.toEntity(request));
+        Trainer created = facade.createTrainer(TrainerMapper.toModel(request));
 
         return new RegistrationResponse(created.getUser().getUsername(), created.getUser().getPassword());
     }
@@ -101,7 +102,7 @@ public class TrainerController {
                                          @PathVariable("username") String username,
                                          @Valid @RequestBody UpdateTrainerRequest request) {
         AccessChecker.requireOwner(credentials, username);
-        Trainer updated = facade.updateTrainer(credentials, TrainerMapper.toEntity(request));
+        Trainer updated = facade.updateTrainer(credentials, TrainerMapper.toModel(request));
 
         return TrainerMapper.toProfileResponse(updated);
     }

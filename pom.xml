@@ -207,6 +207,8 @@
                 <configuration>
                     <release>${java.version}</release>
                     <parameters>true</parameters>
+                    <!-- Run annotation processors (Lombok) explicitly: newer javac warns that it may stop doing it by default -->
+                    <proc>full</proc>
                 </configuration>
             </plugin>
             <!-- Puts the path of each dependency jar into a property: used for the Mockito agent below -->

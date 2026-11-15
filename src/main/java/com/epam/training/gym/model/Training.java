@@ -1,8 +1,10 @@
 package com.epam.training.gym.model;
 
+import com.epam.training.gym.model.validation.FieldLimits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -29,6 +31,7 @@ public class Training {
     private Trainer trainer;
 
     @NotBlank
+    @Size(max = FieldLimits.TRAINING_NAME_MAX)
     private String trainingName;
 
     @NotNull

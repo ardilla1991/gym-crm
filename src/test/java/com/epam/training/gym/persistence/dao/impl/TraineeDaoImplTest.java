@@ -54,6 +54,18 @@ public class TraineeDaoImplTest {
     }
 
     @Test
+    void findByUsername_loadsUserInSameQuery() {
+        traineeDao.save(newTrainee("John.Smith"));
+        flushAndClear();
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        TraineeEntity found = traineeDao.findByUsername("John.Smith").orElseThrow();
+        found.getUser().getPassword();
+
+        assertEquals(1, queries.count());
+    }
+
+    @Test
     void delete_alsoDeletesUserAndTrainings() {
         TraineeEntity trainee = traineeDao.save(newTrainee("John.Smith"));
         Long userId = trainee.getUser().getId();

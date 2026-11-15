@@ -1,5 +1,7 @@
 package com.epam.training.gym.api.rest;
 
+import com.epam.training.gym.api.facade.GymFacade;
+import com.epam.training.gym.api.rest.auth.AuthenticationInterceptor;
 import com.epam.training.gym.api.rest.auth.CredentialsArgumentResolver;
 import org.springdoc.core.configuration.SpringDocConfiguration;
 import org.springdoc.core.configuration.SpringDocSpecPropertiesConfiguration;
@@ -16,6 +18,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
@@ -44,6 +47,24 @@ import java.util.List;
         WebMvcProperties.class
 })
 public class WebConfig implements WebMvcConfigurer {
+
+    /** From the root context: the interceptor checks credentials through it. */
+    private final GymFacade facade;
+
+    public WebConfig(GymFacade facade) {
+        this.facade = facade;
+    }
+
+    /**
+     * Every REST call is authenticated before the controller, except registration
+     * (only POST is mapped to these exact paths) and the health check.
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new AuthenticationInterceptor(facade))
+                .addPathPatterns(ApiPaths.API_V1 + "/**")
+                .excludePathPatterns(ApiPaths.TRAINEES, ApiPaths.TRAINERS, ApiPaths.HEALTH);
+    }
 
     /** Controller methods get the caller's Credentials from the Authorization header. */
     @Override

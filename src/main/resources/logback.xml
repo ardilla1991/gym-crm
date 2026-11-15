@@ -2,8 +2,11 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <!-- %X{transactionId}: the id that TransactionIdFilter put into the MDC; empty outside a REST call -->
-            <pattern>%d{HH:mm:ss.SSS} %-5level [txId=%X{transactionId}] %logger{20} - %msg%n</pattern>
+            <!-- %X{transactionId}: the id that TransactionIdFilter put into the MDC; empty outside a REST call.
+                 %replace: line breaks in a message become spaces. A message may contain values from the client
+                 (query parameters, usernames), and a line break there would start a fake log line without the txId.
+                 Stack traces are written by %ex after the message and keep their lines -->
+            <pattern>%d{HH:mm:ss.SSS} %-5level [txId=%X{transactionId}] %logger{20} - %replace(%msg){'[\r\n]+', ' '}%n</pattern>
         </encoder>
     </appender>
 

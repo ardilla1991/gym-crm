@@ -49,15 +49,15 @@ public class AuthController {
      * Task item 4. Change Login: changes the password of a trainee or a trainer.
      *
      * @param credentials username and the old password from the Authorization header
-     * @param request     the new password
+     * @param request     the new password, exactly 10 characters
      * @throws AuthenticationException if the old password is wrong
      */
     @PutMapping("/password")
     @Operation(summary = "Change password (item 4)",
             description = "The username and the old password go in the Authorization header, "
-                    + "the new password in the body.")
+                    + "the new password in the body. The new password must contain exactly 10 characters.")
     @ApiResponse(responseCode = "200", description = "Password changed")
-    @ApiResponse(responseCode = "400", description = "The new password is blank")
+    @ApiResponse(responseCode = "400", description = "The new password is blank or is not exactly 10 characters long")
     @ApiResponse(responseCode = "401", description = "Missing or wrong username or old password")
     public void changePassword(Credentials credentials, @Valid @RequestBody ChangePasswordRequest request) {
         facade.changePassword(credentials, request.newPassword());

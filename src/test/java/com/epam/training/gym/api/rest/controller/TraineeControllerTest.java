@@ -9,17 +9,17 @@ import com.epam.training.gym.api.rest.dto.TraineeProfileResponse;
 import com.epam.training.gym.api.rest.dto.TrainerSummary;
 import com.epam.training.gym.api.rest.exception.ApiError;
 import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
-import com.epam.training.gym.api.rest.mapper.TraineeMapper;
-import com.epam.training.gym.api.rest.mapper.TrainerMapper;
 import com.epam.training.gym.model.*;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
+import com.epam.training.gym.model.validation.FieldLimits;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.exception.InvalidStateException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -32,6 +32,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -106,6 +107,8 @@ public class TraineeControllerTest {
             "{\"lastName\": \"Smith\"}",                                         // no first name
             "{\"firstName\": \" \", \"lastName\": \"Smith\"}",                   // blank first name
             "{\"firstName\": \"John\"}",                                         // no last name
+            "{\"firstName\": \"Review:Colon\", \"lastName\": \"User\"}",          // ':' breaks HTTP Basic
+            "{\"firstName\": \"Review/Slash\", \"lastName\": \"User\"}",          // '/' breaks /trainees/{username}
             "{\"firstName\": \"John\", \"lastName\": \"Smith\", \"dateOfBirth\": \"2999-01-01\"}" // future date
     })
     void register_invalidRequest_returnsBadRequest(String json) throws Exception {
@@ -113,6 +116,23 @@ public class TraineeControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(facade);
+    }
+
+    @ParameterizedTest
+    @MethodSource("tooLongRegistrations")
+    void register_tooLongField_returnsBadRequest(String json) throws Exception {
+        mockMvc.perform(post(TestPaths.TRAINEES).contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(facade);
+    }
+
+    /** Values one character longer than their columns: without @Size the database would reject them with 500. */
+    static Stream<String> tooLongRegistrations() {
+        return Stream.of(
+                "{\"firstName\": \"" + "a".repeat(FieldLimits.NAME_MAX + 1) + "\", \"lastName\": \"Smith\"}",
+                "{\"firstName\": \"John\", \"lastName\": \"Smith\", \"address\": \""
+                        + "a".repeat(FieldLimits.ADDRESS_MAX + 1) + "\"}");
     }
 
     @Test
@@ -139,7 +159,9 @@ public class TraineeControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertEquals(TraineeMapper.toProfileResponse(john), JSON.readValue(body, TraineeProfileResponse.class));
+        assertEquals(new TraineeProfileResponse("John.Smith", "John", "Smith", LocalDate.of(2000, 1, 15),
+                        "Main St 1", true, List.of()),
+                JSON.readValue(body, TraineeProfileResponse.class));
         // The field name is part of the contract with clients
         assertTrue(body.contains("\"isActive\":true"), body);
     }
@@ -190,7 +212,9 @@ public class TraineeControllerTest {
         assertEquals("Emma", newData.getUser().getFirstName());
         assertFalse(newData.getUser().isActive());
 
-        assertEquals(TraineeMapper.toProfileResponse(newData), JSON.readValue(body, TraineeProfileResponse.class));
+        assertEquals(new TraineeProfileResponse("Emily.Johnson", "Emma", "Johnson", LocalDate.of(1999, 5, 20),
+                        "New St 2", false, List.of()),
+                JSON.readValue(body, TraineeProfileResponse.class));
     }
 
     @Test
@@ -247,7 +271,9 @@ public class TraineeControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertEquals(TrainerMapper.toSummaries(trainers), List.of(JSON.readValue(body, TrainerSummary[].class)));
+        assertEquals(List.of(new TrainerSummary("Anna.Lee", "Anna", "Lee", TrainingTypeName.YOGA),
+                        new TrainerSummary("Mark.Brown", "Mark", "Brown", TrainingTypeName.YOGA)),
+                List.of(JSON.readValue(body, TrainerSummary[].class)));
     }
 
     @Test
@@ -271,7 +297,9 @@ public class TraineeControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertEquals(TrainerMapper.toSummaries(trainers), List.of(JSON.readValue(body, TrainerSummary[].class)));
+        assertEquals(List.of(new TrainerSummary("Anna.Lee", "Anna", "Lee", TrainingTypeName.YOGA),
+                        new TrainerSummary("Mark.Brown", "Mark", "Brown", TrainingTypeName.YOGA)),
+                List.of(JSON.readValue(body, TrainerSummary[].class)));
     }
 
     @Test
@@ -288,6 +316,7 @@ public class TraineeControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "{}",                                                 // no list
+            "{\"trainerUsernames\": []}",                         // empty list
             "{\"trainerUsernames\": [\"Anna.Lee\", \" \"]}"       // blank username in the list
     })
     void updateTrainers_invalidRequest_returnsBadRequest(String json) throws Exception {

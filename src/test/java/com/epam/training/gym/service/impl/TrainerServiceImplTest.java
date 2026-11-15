@@ -34,7 +34,6 @@ public class TrainerServiceImplTest {
 
     private static final String USERNAME = "Anna.Lee";
     private static final String CURRENT_PASSWORD = "abcdef1234";
-    private static final String NEW_PASSWORD = "newPass123";
 
     private static final Credentials VALID_CREDENTIALS = new Credentials(USERNAME, CURRENT_PASSWORD);
     private static final Credentials WRONG_PASSWORD_CREDENTIALS = new Credentials(USERNAME, "wrong");
@@ -81,6 +80,25 @@ public class TrainerServiceImplTest {
     }
 
     @Test
+    void create_returnsGeneratedPassword() {
+        Trainer trainer = newTrainer(TrainingTypeName.ZUMBA);
+        when(trainingTypeDao.findByName(TrainingTypeName.ZUMBA))
+                .thenReturn(Optional.of(new TrainingTypeEntity(3L, TrainingTypeName.ZUMBA)));
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setUsername("Anna.Lee");
+            user.setPassword("Gen3rated1");
+            return null;
+        }).when(newUserDataGenerator).fillNewUserData(trainer.getUser());
+        when(trainerDao.save(any(TrainerEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Trainer result = trainerService.create(trainer);
+
+        // Registration is the only result with a password: the user needs it to sign in
+        assertEquals("Gen3rated1", result.getUser().getPassword());
+    }
+
+    @Test
     void create_unknownTrainingType_isNotSaved() {
         Trainer trainer = newTrainer(TrainingTypeName.ZUMBA);
         when(trainingTypeDao.findByName(TrainingTypeName.ZUMBA)).thenReturn(Optional.empty());
@@ -113,46 +131,23 @@ public class TrainerServiceImplTest {
         assertFalse(trainerService.matchCredentials(new Credentials("No.Body", CURRENT_PASSWORD)));
     }
 
-    // ---------- changePassword ----------
+    // ---------- authenticate ----------
 
     @Test
-    void changePassword_rightCredentials_setsNewPassword() {
-        TrainerEntity trainer = existingTrainer(true);
-        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
-
-        trainerService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD);
-
-        assertEquals(NEW_PASSWORD, trainer.getUser().getPassword());
-    }
-
-    @Test
-    void changePassword_wrongPassword_throwsAndKeepsOldPassword() {
-        TrainerEntity trainer = existingTrainer(true);
-        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
-
-        assertThrows(AuthenticationException.class,
-                () -> trainerService.changePassword(WRONG_PASSWORD_CREDENTIALS, NEW_PASSWORD));
-
-        assertEquals(CURRENT_PASSWORD, trainer.getUser().getPassword());
-    }
-
-    @Test
-    void changePassword_blankNewPassword_throwsAndKeepsOldPassword() {
-        TrainerEntity trainer = existingTrainer(true);
-        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
-
-        assertThrows(IllegalArgumentException.class,
-                () -> trainerService.changePassword(VALID_CREDENTIALS, " "));
-
-        assertEquals(CURRENT_PASSWORD, trainer.getUser().getPassword());
-    }
-
-    @Test
-    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword() {
+    void authenticate_rightPassword_returnsOwnProfileWithoutPassword() {
         when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
 
-        assertThrows(AuthenticationException.class,
-                () -> trainerService.changePassword(WRONG_PASSWORD_CREDENTIALS, " "));
+        Trainer result = trainerService.authenticate(VALID_CREDENTIALS);
+
+        assertEquals(USERNAME, result.getUser().getUsername());
+        assertNull(result.getUser().getPassword());
+    }
+
+    @Test
+    void authenticate_wrongPassword_throws() {
+        when(trainerDao.findByUsername(USERNAME)).thenReturn(Optional.of(existingTrainer(true)));
+
+        assertThrows(AuthenticationException.class, () -> trainerService.authenticate(WRONG_PASSWORD_CREDENTIALS));
     }
 
     // ---------- changeActiveStatus ----------
@@ -225,6 +220,7 @@ public class TrainerServiceImplTest {
         Trainer result = trainerService.getProfile(traineeCredentials, USERNAME);
 
         assertEquals(USERNAME, result.getUser().getUsername());
+        assertNull(result.getUser().getPassword());     // another user's password never leaves the service
         verify(userAuthenticator).authenticate(traineeCredentials);
     }
 

@@ -5,8 +5,9 @@ import com.epam.training.gym.api.rest.logging.RequestLoggingFilter;
 import com.epam.training.gym.api.rest.logging.TransactionIdFilter;
 import com.epam.training.gym.config.AppConfig;
 import jakarta.servlet.ServletRegistration;
-import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
+import org.apache.catalina.LifecycleState;
+import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +43,12 @@ public final class GymApplication {
         tomcat.setPort(port);
         tomcat.getConnector();   // creates the HTTP connector
 
-        Context context = tomcat.addContext("", baseDir.toString());
+        StandardContext context = (StandardContext) tomcat.addContext("", baseDir.toString());
         context.setParentClassLoader(GymApplication.class.getClassLoader());
+        // Memory leak checks are for servers that redeploy many applications in one JVM; this embedded
+        // application stops with its JVM. Without this Tomcat prints --add-opens warnings on every stop
+        context.setClearReferencesThreadLocals(false);
+        context.setClearReferencesRmiTargets(false);
 
         // Called by Tomcat when the web application starts:
         // registers Spring through the standard Servlet API
@@ -70,6 +75,13 @@ public final class GymApplication {
         }, null);
 
         tomcat.start();
+        // Tomcat does not throw when the web application fails to start (for example, no database):
+        // it logs the error and answers every request with 404. Stop instead of running empty
+        if (context.getState() != LifecycleState.STARTED) {
+            tomcat.stop();
+            tomcat.destroy();
+            throw new IllegalStateException("Gym CRM failed to start: see the error above");
+        }
         GymApplication application = new GymApplication(tomcat);
         log.info("Gym CRM started on http://localhost:{}", application.port());
 

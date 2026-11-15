@@ -4,6 +4,7 @@ import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.persistence.entity.UserEntity;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
+import com.epam.training.gym.service.exception.InvalidInputException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,22 +51,22 @@ public class UserServiceImplTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void changePassword_blankNewPassword_throwsAndKeepsOldPassword(String newPassword) {
+    @ValueSource(strings = {" ", "          ", "336", "123456789", "12345678901"})
+    void changePassword_invalidNewPassword_throwsAndKeepsOldPassword(String newPassword) {
         UserEntity user = UserEntity.builder().username(USERNAME).password(CURRENT_PASSWORD).build();
         when(userAuthenticator.authenticate(CREDENTIALS)).thenReturn(user);
 
-        assertThrows(IllegalArgumentException.class, () -> userService.changePassword(CREDENTIALS, newPassword));
+        assertThrows(InvalidInputException.class, () -> userService.changePassword(CREDENTIALS, newPassword));
 
         assertEquals(CURRENT_PASSWORD, user.getPassword());
     }
 
-    @Test
-    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword() {
+    @ParameterizedTest
+    @ValueSource(strings = {" ", "336", "12345678901"})
+    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword(String newPassword) {
         when(userAuthenticator.authenticate(CREDENTIALS)).thenThrow(new AuthenticationException());
 
-        // A blank new password with wrong credentials: the credentials are checked first
-        assertThrows(AuthenticationException.class, () -> userService.changePassword(CREDENTIALS, " "));
+        assertThrows(AuthenticationException.class, () -> userService.changePassword(CREDENTIALS, newPassword));
     }
 
 }

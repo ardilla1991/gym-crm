@@ -13,6 +13,9 @@ public final class TestPaths {
     public static final String TRAINING_TYPES = "/api/v1/training-types";
     public static final String LOGIN = "/api/v1/login";
     public static final String CHANGE_PASSWORD = "/api/v1/login/password";
+    public static final String HEALTH = "/api/v1/health";
+    /** OpenAPI JSON built by springdoc. */
+    public static final String API_DOCS = "/v3/api-docs";
 
     private TestPaths() {
     }

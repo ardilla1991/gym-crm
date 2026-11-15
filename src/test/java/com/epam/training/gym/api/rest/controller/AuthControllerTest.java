@@ -10,6 +10,8 @@ import com.epam.training.gym.model.auth.Credentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
@@ -110,12 +112,17 @@ public class AuthControllerTest {
         verifyNoInteractions(facade);
     }
 
-    @Test
-    void changePassword_blankNewPassword_returnsBadRequest() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{}", "{\"newPassword\":null}", "{\"newPassword\":\"\"}",
+            "{\"newPassword\":\"          \"}", "{\"newPassword\":\"336\"}",
+            "{\"newPassword\":\"123456789\"}", "{\"newPassword\":\"12345678901\"}"
+    })
+    void changePassword_invalidNewPassword_returnsBadRequest(String body) throws Exception {
         mockMvc.perform(put(TestPaths.CHANGE_PASSWORD)
                         .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"newPassword\": \" \"}"))
+                        .content(body))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(facade);

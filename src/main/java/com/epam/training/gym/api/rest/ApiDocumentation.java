@@ -1,9 +1,20 @@
 package com.epam.training.gym.api.rest;
 
+import com.epam.training.gym.api.rest.exception.ApiError;
+import com.epam.training.gym.model.auth.Credentials;
+import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.media.Content;
+import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.media.Schema;
+import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springdoc.core.utils.SpringDocUtils;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -24,4 +35,46 @@ import org.springframework.context.annotation.Configuration;
 public class ApiDocumentation {
 
     public static final String BASIC_AUTH = "basicAuth";
+
+    static {
+        // Credentials come from the Authorization header (CredentialsArgumentResolver), not from the query.
+        // Without this springdoc shows their fields as query parameters username and password,
+        // and Swagger UI sends the password in the URL
+        SpringDocUtils.getConfig().addRequestWrapperToIgnore(Credentials.class);
+    }
+
+    /**
+     * Every error response (4xx, 5xx) has an ApiError body: that is what GlobalExceptionHandler returns.
+     * Without this springdoc shows the method's success type (for example TraineeProfileResponse) for errors too.
+     * One rule here instead of the same content on every @ApiResponse of every controller.
+     */
+    @Bean
+    public OpenApiCustomizer errorResponsesHaveApiErrorBody() {
+        return openApi -> {
+            // The ApiError structure (status, error, message) is added to the documented schemas
+            openApi.getComponents().getSchemas().putAll(ModelConverters.getInstance().read(ApiError.class));
+            Content apiErrorBody = apiErrorBody();
+            for (PathItem path : openApi.getPaths().values()) {
+                for (Operation operation : path.readOperations()) {
+                    operation.getResponses().forEach((code, response) -> {
+                        if (isError(code)) {
+                            response.setContent(apiErrorBody);
+                        }
+                    });
+                }
+            }
+        };
+    }
+
+    /** A JSON body that refers to the ApiError schema. */
+    private static Content apiErrorBody() {
+        Schema<?> apiError = new Schema<>().$ref("#/components/schemas/ApiError");
+        return new Content().addMediaType(org.springframework.http.MediaType.APPLICATION_JSON_VALUE,
+                new MediaType().schema(apiError));
+    }
+
+    /** 4xx and 5xx: the codes that GlobalExceptionHandler answers with ApiError. */
+    private static boolean isError(String code) {
+        return code.startsWith("4") || code.startsWith("5");
+    }
 }

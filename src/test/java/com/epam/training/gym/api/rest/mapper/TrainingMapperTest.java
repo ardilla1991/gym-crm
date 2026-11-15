@@ -19,8 +19,8 @@ public class TrainingMapperTest {
     private static final TrainingType YOGA = new TrainingType(2L, TrainingTypeName.YOGA);
 
     @Test
-    void toEntity_copiesNameDateAndDuration() {
-        Training training = TrainingMapper.toEntity(
+    void toModel_copiesNameDateAndDuration() {
+        Training training = TrainingMapper.toModel(
                 new AddTrainingRequest("Emily.Johnson", "Anna.Lee", "Morning yoga", DATE, 60));
 
         assertEquals("Morning yoga", training.getTrainingName());

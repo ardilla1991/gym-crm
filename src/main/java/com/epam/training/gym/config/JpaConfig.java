@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.util.Properties;
 
 /**
  * Database and JPA configuration.
@@ -41,15 +42,22 @@ public class JpaConfig {
         return new HikariDataSource(config);
     }
 
-    /** Creates Hibernate and gives it the connection pool and the entity classes. */
+    /**
+     * Creates Hibernate and gives it the connection pool and the entity classes.
+     * The schema action depends on the database (db.schema): H2 is recreated on every start,
+     * PostgreSQL keeps its data and is only validated.
+     */
     @Bean
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource)
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource,
+                                                                       @Value("${db.schema}") String schemaAction)
             throws IOException {
         LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
         factory.setDataSource(dataSource);
         factory.setPackagesToScan(ENTITY_PACKAGE);
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        factory.setJpaProperties(PropertiesLoaderUtils.loadProperties(new ClassPathResource("jpa.properties")));
+        Properties jpaProperties = PropertiesLoaderUtils.loadProperties(new ClassPathResource("jpa.properties"));
+        jpaProperties.setProperty("hibernate.hbm2ddl.auto", schemaAction);
+        factory.setJpaProperties(jpaProperties);
         return factory;
     }
 
