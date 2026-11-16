@@ -361,6 +361,32 @@ public class TraineeControllerTest {
     }
 
     @Test
+    void getTrainings_blankTrainerName_passesEmptyCriteria() throws Exception {
+        when(facade.getTraineeTrainings(EMILY, new TraineeTrainingCriteria(null, null, null, null)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get(TestPaths.TRAINEES + "/Emily.Johnson/trainings")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .param("trainerName", "   "))
+                .andExpect(status().isOk());
+
+        verify(facade).getTraineeTrainings(EMILY, new TraineeTrainingCriteria(null, null, null, null));
+    }
+
+    @Test
+    void getTrainings_blankPeriodFrom_passesEmptyCriteria() throws Exception {
+        when(facade.getTraineeTrainings(EMILY, new TraineeTrainingCriteria(null, null, null, null)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get(TestPaths.TRAINEES + "/Emily.Johnson/trainings")
+                        .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER)
+                        .param("periodFrom", "   "))
+                .andExpect(status().isOk());
+
+        verify(facade).getTraineeTrainings(EMILY, new TraineeTrainingCriteria(null, null, null, null));
+    }
+
+    @Test
     void getTrainings_anotherTrainee_returnsForbidden() throws Exception {
         mockMvc.perform(get(TestPaths.TRAINEES + "/John.Smith/trainings")
                         .header(HttpHeaders.AUTHORIZATION, EMILY_HEADER))

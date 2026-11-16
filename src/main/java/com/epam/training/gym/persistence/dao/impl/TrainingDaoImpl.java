@@ -56,9 +56,7 @@ public class TrainingDaoImpl implements TrainingDao {
         conditions.add(cb.equal(training.get("trainee").get("user").get("username"), traineeUsername));
         addDateConditions(cb, training, conditions, criteria.fromDate(), criteria.toDate());
         if (criteria.trainerName() != null) {
-            conditions.add(cb.equal(
-                    cb.lower(training.get("trainer").get("user").<String>get("firstName")),
-                    criteria.trainerName().toLowerCase()));
+            conditions.add(nameMatches(cb, training.get("trainer").get("user"), criteria.trainerName()));
         }
         if (criteria.trainingType() != null) {
             conditions.add(cb.equal(
@@ -85,9 +83,7 @@ public class TrainingDaoImpl implements TrainingDao {
         conditions.add(cb.equal(training.get("trainer").get("user").get("username"), trainerUsername));
         addDateConditions(cb, training, conditions, criteria.fromDate(), criteria.toDate());
         if (criteria.traineeName() != null) {
-            conditions.add(cb.equal(
-                    cb.lower(training.get("trainee").get("user").<String>get("firstName")),
-                    criteria.traineeName().toLowerCase()));
+            conditions.add(nameMatches(cb, training.get("trainee").get("user"), criteria.traineeName()));
         }
 
         query.select(training)
@@ -108,6 +104,14 @@ public class TrainingDaoImpl implements TrainingDao {
         if (toDate != null) {
             conditions.add(cb.lessThanOrEqualTo(training.<LocalDate>get("trainingDate"), toDate));
         }
+    }
+
+    /** The name equals the user's first name or full name ("David" or "David Miller"), case-insensitive. */
+    private static Predicate nameMatches(CriteriaBuilder cb, Path<?> user, String name) {
+        Expression<String> firstName = user.get("firstName");
+        Expression<String> fullName = cb.concat(cb.concat(firstName, " "), user.<String>get("lastName"));
+        String wanted = name.toLowerCase();
+        return cb.or(cb.equal(cb.lower(firstName), wanted), cb.equal(cb.lower(fullName), wanted));
     }
 
     /**

@@ -10,6 +10,7 @@ import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidInputException;
 import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
@@ -289,6 +290,18 @@ public class TrainerServiceImplTest {
                 .thenReturn(List.of());
 
         assertTrue(trainerService.getTrainings(VALID_CREDENTIALS, null).isEmpty());
+    }
+
+    @Test
+    void getTrainings_fromDateAfterToDate_throwsAndDoesNotSearch() {
+        signIn(true);
+        TrainerTrainingCriteria criteria = TrainerTrainingCriteria.builder()
+                .fromDate(LocalDate.of(2026, 5, 2))
+                .toDate(LocalDate.of(2026, 5, 1))
+                .build();
+
+        assertThrows(InvalidInputException.class, () -> trainerService.getTrainings(VALID_CREDENTIALS, criteria));
+        verify(trainingDao, never()).findTrainerTrainings(any(), any());
     }
 
     private static Training training(Trainer trainer) {

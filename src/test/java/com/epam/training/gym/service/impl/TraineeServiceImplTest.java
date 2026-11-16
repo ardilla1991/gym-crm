@@ -353,6 +353,18 @@ public class TraineeServiceImplTest {
         verify(trainingDao, never()).findTraineeTrainings(any(), any());
     }
 
+    @Test
+    void getTrainings_fromDateAfterToDate_throwsAndDoesNotSearch() {
+        signIn(true);
+        TraineeTrainingCriteria criteria = TraineeTrainingCriteria.builder()
+                .fromDate(LocalDate.of(2026, 5, 2))
+                .toDate(LocalDate.of(2026, 5, 1))
+                .build();
+
+        assertThrows(InvalidInputException.class, () -> traineeService.getTrainings(VALID_CREDENTIALS, criteria));
+        verify(trainingDao, never()).findTraineeTrainings(any(), any());
+    }
+
     // ---------- getUnassignedTrainers ----------
 
     @Test

@@ -13,6 +13,7 @@ import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
+import com.epam.training.gym.service.validation.TrainingPeriodValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -107,6 +108,7 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     public List<Training> getTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
         authenticate(credentials);
         TrainerTrainingCriteria filters = criteria != null ? criteria : TrainerTrainingCriteria.builder().build();
+        TrainingPeriodValidator.validate(filters.fromDate(), filters.toDate());
         List<Training> trainings = trainingDao.findTrainerTrainings(credentials.username(), filters);
         log.info("Trainer trainings found: username={}, count={}", credentials.username(), trainings.size());
 

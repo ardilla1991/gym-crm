@@ -173,7 +173,7 @@ Not covered on purpose: `Main` and `GymApplication.await()` (they start and bloc
 - Activate/deactivate takes the wanted status (`{"isActive": false}`); the same status again gives 409,
   which is how the task's "not idempotent" is read (by HTTP terms the effect is idempotent).
 - PUT replaces the whole profile: an optional field that is not sent becomes empty.
-- Training criteria: dates are inclusive, names are compared with the first name, case-insensitive.
+- Training criteria: dates are inclusive, and periodFrom after periodTo is a 400; a blank name means no filter; a name matches the first name or the full name ("David" or "David Miller"), case-insensitive.
 - Deleting a trainee deletes its trainings through `CascadeType.REMOVE`.
 - Each layer works with its own types: services see only models, entities never leave `persistence`.
   DAOs convert models and entities with the mappers in `persistence.mapper`, and every change is an explicit DAO call.

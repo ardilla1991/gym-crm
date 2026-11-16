@@ -71,7 +71,7 @@ public interface TraineeApiDocs {
             description = "Only the trainee can get their own trainings. All criteria are optional; dates are inclusive.")
     @SecurityRequirement(name = ApiDocumentation.BASIC_AUTH)
     @ApiResponse(responseCode = "200", description = "Trainings that match all given criteria")
-    @ApiResponse(responseCode = "400", description = "Invalid date or training type")
+    @ApiResponse(responseCode = "400", description = "Invalid date or training type, or periodFrom is after periodTo")
     @ApiResponse(responseCode = "401", description = "Missing or wrong username or password")
     @ApiResponse(responseCode = "403", description = "The username is not the signed-in user")
     List<TraineeTrainingResponse> getTrainings(
@@ -79,7 +79,7 @@ public interface TraineeApiDocs {
             String username,
             @Parameter(description = "Trainings on or after this date, yyyy-MM-dd") LocalDate periodFrom,
             @Parameter(description = "Trainings on or before this date, yyyy-MM-dd") LocalDate periodTo,
-            @Parameter(description = "First name of the trainer, case-insensitive", example = "David") String trainerName,
+            @Parameter(description = "First name or full name of the trainer, case-insensitive", example = "David Miller") String trainerName,
             @Parameter(description = "Training type of the training") TrainingTypeName trainingType);
 
     @Operation(summary = "Activate or deactivate own trainee profile (item 15)",
