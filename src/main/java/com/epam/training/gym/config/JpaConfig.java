@@ -20,17 +20,13 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.util.Properties;
 
-/**
- * Database and JPA configuration.
- * The database is chosen at startup: H2 by default, PostgreSQL with -Ddb=postgres.
- */
+/** Database and JPA: H2 by default, PostgreSQL with -Ddb=postgres. */
 @Configuration
 @EnableTransactionManagement
 @PropertySource("classpath:db-${db:h2}.properties")
 public class JpaConfig {
     private static final String ENTITY_PACKAGE = "com.epam.training.gym.persistence.entity";
 
-    /** Connection pool: keeps several open connections and reuses them. */
     @Bean
     public DataSource dataSource(@Value("${db.url}") String url,
                                  @Value("${db.username}") String username,
@@ -42,11 +38,7 @@ public class JpaConfig {
         return new HikariDataSource(config);
     }
 
-    /**
-     * Creates Hibernate and gives it the connection pool and the entity classes.
-     * The schema action depends on the database (db.schema): H2 is recreated on every start,
-     * PostgreSQL keeps its data and is only validated.
-     */
+    /** db.schema: H2 is recreated on every start, PostgreSQL is only validated. */
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource dataSource,
                                                                        @Value("${db.schema}") String schemaAction)
@@ -61,15 +53,14 @@ public class JpaConfig {
         return factory;
     }
 
-    /** Opens, commits and rolls back transactions for @Transactional methods. */
     @Bean
     public PlatformTransactionManager transactionManager(EntityManagerFactory entityManagerFactory) {
         return new JpaTransactionManager(entityManagerFactory);
     }
 
     /**
-     * Turns database exceptions thrown in @Repository classes into Spring's DataAccessException.
-     * Static: it is a BeanPostProcessor and is created before regular beans.
+     * Turns database exceptions from @Repository classes into Spring's DataAccessException.
+     * Static: a BeanPostProcessor must be created before regular beans.
      */
     @Bean
     public static PersistenceExceptionTranslationPostProcessor exceptionTranslation() {

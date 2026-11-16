@@ -13,39 +13,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * Fills a controller method parameter of type Credentials from the HTTP Basic Authorization header:
- * {@code Authorization: Basic base64(username:password)}.
- * Only checks that the header is present and well-formed; the password itself is checked
- * by AuthenticationInterceptor before the controller and again by the services.
+ * Fills a Credentials parameter of a controller method from the HTTP Basic Authorization header.
+ * Only parses the header; the password is checked by AuthenticationInterceptor and the services.
  */
 public class CredentialsArgumentResolver implements HandlerMethodArgumentResolver {
 
     private static final String BASIC_PREFIX = "Basic ";
 
-    /** Supports only parameters of type Credentials; all other parameters are left to Spring. */
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.getParameterType() == Credentials.class;
     }
 
-    /** Reads the Authorization header of the current request and turns it into Credentials. */
     @Override
     public Credentials resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
         return parse(webRequest.getHeader(HttpHeaders.AUTHORIZATION));
     }
 
-    /**
-     * Parses an HTTP Basic Authorization header value.
-     * Package-private so that the unit test can call it directly.
-     *
-     * @param header the header value, for example {@code Basic RW1pbHk6c2VjcmV0}; may be null
-     * @return username and password from the header
-     * @throws AuthenticationException if the header is missing, is not Basic, is not valid Base64
-     *                                 or has no colon between username and password
-     */
+    /** @throws AuthenticationException if the header is missing, not Basic, not Base64 or has no colon */
     static Credentials parse(String header) {
-        // "Basic" is case-insensitive by the HTTP standard: "basic ..." is valid too
+        // "Basic" is case-insensitive by the HTTP standard
         if (header == null || !header.regionMatches(true, 0, BASIC_PREFIX, 0, BASIC_PREFIX.length())) {
             throw new AuthenticationException("Authentication required");
         }
@@ -58,7 +46,7 @@ public class CredentialsArgumentResolver implements HandlerMethodArgumentResolve
         return new Credentials(decoded.substring(0, colon), decoded.substring(colon + 1));
     }
 
-    /** Decodes Base64 to text; invalid Base64 becomes an authentication error instead of a 500. */
+    /** Invalid Base64 becomes a 401 instead of a 500. */
     private static String decode(String base64) {
         try {
             return new String(Base64.getDecoder().decode(base64), StandardCharsets.UTF_8);

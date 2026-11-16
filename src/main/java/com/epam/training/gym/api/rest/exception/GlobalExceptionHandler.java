@@ -39,7 +39,6 @@ public class GlobalExceptionHandler {
                 .body(apiError(HttpStatus.UNAUTHORIZED, e.getMessage()));
     }
 
-    /** The signed-in user tries to change data of another user. */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException e) {
         return respond(HttpStatus.FORBIDDEN, e.getMessage());
@@ -51,10 +50,7 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.CONFLICT, e.getMessage());
     }
 
-    /**
-     * The data conflicts with data saved at the same moment, for example two registrations of the same name
-     * chose one username: the unique index rejected the second one. Repeating the request generates a new username.
-     */
+    /** Two registrations chose the same username at the same moment: the unique index rejected one. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataConflict(DataIntegrityViolationException e) {
         // The database message has table and column names: it is logged, not sent to the client
@@ -62,7 +58,6 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.CONFLICT, "The data was changed at the same time by another request, please repeat");
     }
 
-    /** There is no trainee, trainer or training type with the given name. */
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(EntityNotFoundException e) {
         return respond(HttpStatus.NOT_FOUND, e.getMessage());
@@ -92,7 +87,7 @@ public class GlobalExceptionHandler {
                 "Invalid value '" + e.getValue() + "' of parameter '" + e.getName() + "'");
     }
 
-    /** Service validation failed (EntityValidator): the same 400 as for an invalid request body. */
+    /** Service validation failed: the same 400 as for an invalid request body. */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException e) {
         String message = e.getConstraintViolations().stream()
@@ -108,10 +103,7 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
-    /**
-     * Everything else. Spring MVC exceptions (unknown path, wrong HTTP method...) keep their own status and headers;
-     * unexpected exceptions become 500 without details, so no internals leak to the client.
-     */
+    /** Spring MVC errors (404, 405...) keep their status and headers; anything else is a 500 without details. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleOther(Exception e) {
         if (e instanceof ErrorResponse springError) {

@@ -31,8 +31,7 @@ import java.util.List;
 @EnableWebMvc
 @ComponentScan("com.epam.training.gym.api.rest")
 @Import({
-        // springdoc without Spring Boot: the configuration that Boot would load automatically (springdoc FAQ).
-        // Builds /v3/api-docs from the controllers and serves Swagger UI at /swagger-ui/index.html
+        // springdoc without Spring Boot: what Boot would load automatically (springdoc FAQ)
         SpringDocConfiguration.class,
         SpringDocConfigProperties.class,
         SpringDocSpecPropertiesConfiguration.class,
@@ -41,14 +40,12 @@ import java.util.List;
         SwaggerConfig.class,
         SwaggerUiConfigProperties.class,
         SwaggerUiOAuthProperties.class,
-        // Spring Boot web and MVC settings (spring.web.*, spring.mvc.*), needed by Swagger UI;
-        // Boot would create these beans itself
+        // Boot's web settings, needed by Swagger UI
         WebProperties.class,
         WebMvcProperties.class
 })
 public class WebConfig implements WebMvcConfigurer {
 
-    /** From the root context: the interceptor checks credentials through it. */
     private final GymFacade facade;
 
     public WebConfig(GymFacade facade) {

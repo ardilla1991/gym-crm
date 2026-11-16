@@ -23,7 +23,6 @@ public class TrainingMapper {
                 fullName(training.getTrainer().getUser()));
     }
 
-    /** Converts each training to the trainee's view of it. */
     public static List<TraineeTrainingResponse> toTraineeTrainingResponses(List<Training> trainings) {
         return trainings.stream()
                 .map(TrainingMapper::toTraineeTrainingResponse)
@@ -37,7 +36,6 @@ public class TrainingMapper {
                 fullName(training.getTrainee().getUser()));
     }
 
-    /** Converts each training to the trainer's view of it. */
     public static List<TrainerTrainingResponse> toTrainerTrainingResponses(List<Training> trainings) {
         return trainings.stream()
                 .map(TrainingMapper::toTrainerTrainingResponse)
@@ -58,7 +56,6 @@ public class TrainingMapper {
         return new TrainingTypeResponse(trainingType.getId(), trainingType.getTrainingTypeName());
     }
 
-    /** Converts each training type to its response. */
     public static List<TrainingTypeResponse> toResponses(List<TrainingType> types) {
         return types.stream()
                 .map(TrainingMapper::toResponse)

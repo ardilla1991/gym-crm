@@ -37,21 +37,17 @@ public class ApiDocumentation {
     public static final String BASIC_AUTH = "basicAuth";
 
     static {
-        // Credentials come from the Authorization header (CredentialsArgumentResolver), not from the query.
-        // Without this springdoc shows their fields as query parameters username and password,
-        // and Swagger UI sends the password in the URL
+        // Credentials come from the Authorization header; without this Swagger UI would send them in the query
         SpringDocUtils.getConfig().addRequestWrapperToIgnore(Credentials.class);
     }
 
     /**
-     * Every error response (4xx, 5xx) has an ApiError body: that is what GlobalExceptionHandler returns.
-     * Without this springdoc shows the method's success type (for example TraineeProfileResponse) for errors too.
-     * One rule here instead of the same content on every @ApiResponse of every controller.
+     * Every 4xx and 5xx response has an ApiError body, as GlobalExceptionHandler returns.
+     * Without this springdoc shows the success type (for example TraineeProfileResponse) for errors too.
      */
     @Bean
     public OpenApiCustomizer errorResponsesHaveApiErrorBody() {
         return openApi -> {
-            // The ApiError structure (status, error, message) is added to the documented schemas
             openApi.getComponents().getSchemas().putAll(ModelConverters.getInstance().read(ApiError.class));
             Content apiErrorBody = apiErrorBody();
             for (PathItem path : openApi.getPaths().values()) {
@@ -66,14 +62,12 @@ public class ApiDocumentation {
         };
     }
 
-    /** A JSON body that refers to the ApiError schema. */
     private static Content apiErrorBody() {
         Schema<?> apiError = new Schema<>().$ref("#/components/schemas/ApiError");
         return new Content().addMediaType(org.springframework.http.MediaType.APPLICATION_JSON_VALUE,
                 new MediaType().schema(apiError));
     }
 
-    /** 4xx and 5xx: the codes that GlobalExceptionHandler answers with ApiError. */
     private static boolean isError(String code) {
         return code.startsWith("4") || code.startsWith("5");
     }
