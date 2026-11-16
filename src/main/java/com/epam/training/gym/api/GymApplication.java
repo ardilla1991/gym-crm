@@ -33,39 +33,32 @@ public final class GymApplication {
         this.tomcat = tomcat;
     }
 
-    /** @param port HTTP port;
-     *  0 means any free port (used by tests) */
+    /** @param port HTTP port, 0 for any free port */
     public static GymApplication start(int port) throws LifecycleException, IOException {
         Path baseDir = Files.createTempDirectory("gym-tomcat");
 
         Tomcat tomcat = new Tomcat();
         tomcat.setBaseDir(baseDir.toString());
         tomcat.setPort(port);
-        tomcat.getConnector();   // creates the HTTP connector
+        tomcat.getConnector();
 
         StandardContext context = (StandardContext) tomcat.addContext("", baseDir.toString());
         context.setParentClassLoader(GymApplication.class.getClassLoader());
-        // Memory leak checks are for servers that redeploy many applications in one JVM; this embedded
-        // application stops with its JVM. Without this Tomcat prints --add-opens warnings on every stop
+        // Leak checks are for servers that redeploy applications; without this Tomcat warns on every stop
         context.setClearReferencesThreadLocals(false);
         context.setClearReferencesRmiTargets(false);
 
-        // Called by Tomcat when the web application starts:
-        // registers Spring through the standard Servlet API
         context.addServletContainerInitializer((classes, servletContext) -> {
-            // Root context: services, DAOs, database. Created on startup, closed on shutdown
             AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
             rootContext.register(AppConfig.class);
             servletContext.addListener(new ContextLoaderListener(rootContext));
 
-            // Filters run before DispatcherServlet, in the order they are added:
-            // first the transactionId, so that the request log line already has it
+            // Filters run in the order they are added: transactionId must be set before the request is logged
             servletContext.addFilter("transactionId", new TransactionIdFilter())
                     .addMappingForUrlPatterns(null, true, "/*");
             servletContext.addFilter("requestLogging", new RequestLoggingFilter())
                     .addMappingForUrlPatterns(null, true, "/*");
 
-            // Web context: controllers. A child of the root context, owned by DispatcherServlet
             AnnotationConfigWebApplicationContext webContext = new AnnotationConfigWebApplicationContext();
             webContext.register(WebConfig.class);
             ServletRegistration.Dynamic dispatcher =
@@ -75,8 +68,7 @@ public final class GymApplication {
         }, null);
 
         tomcat.start();
-        // Tomcat does not throw when the web application fails to start (for example, no database):
-        // it logs the error and answers every request with 404. Stop instead of running empty
+        // Tomcat does not throw when the application fails to start, it answers 404 instead
         if (context.getState() != LifecycleState.STARTED) {
             tomcat.stop();
             tomcat.destroy();
