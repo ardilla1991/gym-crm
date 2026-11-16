@@ -52,11 +52,11 @@ public class RequestLoggingFilter extends HttpFilter {
         // The first line of the call: everything the call logs (services, SQL) comes after it.
         // The bodies are not known yet: they are read later by the controller, so they are logged at the end
         log.info("REST {} started", endpointForLog(request));
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
         try {
             chain.doFilter(cachedRequest, cachedResponse);
         } finally {
-            logCall(cachedRequest, cachedResponse, System.currentTimeMillis() - start);
+            logCall(cachedRequest, cachedResponse, (System.nanoTime() - start) / 1_000_000);
             // The response body is still in the wrapper: send it to the client
             cachedResponse.copyBodyToResponse();
         }
@@ -68,7 +68,7 @@ public class RequestLoggingFilter extends HttpFilter {
         String endpoint = endpointForLog(request);
         Level level = status >= 500 ? Level.ERROR : status >= 400 ? Level.WARN : Level.INFO;
 
-        log.atLevel(level).log("REST {} -> {} in {} ms, request: {}, response: {}",
+        log.atLevel(level).log("REST {} completed: {} in {} ms, request: {}, response: {}",
                 endpoint, status, millis,
                 // The new password can be written in JSON in many ways (escapes, spaces): this body is never logged
                 isPasswordChange(request) ? "[omitted]" : forLog(request.getContentAsByteArray()),

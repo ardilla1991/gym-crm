@@ -153,7 +153,7 @@ Logback, configured in `src/main/resources/logback.xml`.
 20:45:10.195 INFO  [txId=3f2b6c1e-...] c.e.t.g.a.r.l.RequestLoggingFilter - REST POST /api/v1/trainees started
 20:45:10.214 DEBUG [txId=3f2b6c1e-...] org.hibernate.SQL - insert into users (first_name,is_active,last_name,password,username,id) values (?,?,?,?,?,default)
 ...
-20:45:10.236 INFO  [txId=3f2b6c1e-...] c.e.t.g.a.r.l.RequestLoggingFilter - REST POST /api/v1/trainees -> 201 in 41 ms,
+20:45:10.236 INFO  [txId=3f2b6c1e-...] c.e.t.g.a.r.l.RequestLoggingFilter - REST POST /api/v1/trainees completed: 201 in 41 ms,
 request: {"firstName":"Anna","lastName":"Lee"}, response: {"username":"Anna.Lee","password":"***"}
 ```
 

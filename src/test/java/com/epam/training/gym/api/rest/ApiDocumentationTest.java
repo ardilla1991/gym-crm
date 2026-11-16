@@ -11,23 +11,29 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.lang.reflect.Method;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Swagger annotations do nothing at runtime, so this test makes sure no endpoint is left undocumented. */
+/**
+ * Swagger annotations do nothing at runtime, so this test makes sure no endpoint is left undocumented.
+ * The annotations are on the *Api interfaces: AnnotatedElementUtils finds them through the controller.
+ */
 public class ApiDocumentationTest {
 
     @ParameterizedTest
     @ValueSource(classes = {AuthController.class, HealthController.class, TraineeController.class,
             TrainerController.class, TrainingController.class, TrainingTypeController.class})
     void everyEndpoint_isDocumented(Class<?> controller) {
-        assertTrue(controller.isAnnotationPresent(Tag.class), controller.getSimpleName() + " has no @Tag");
+        assertTrue(AnnotatedElementUtils.hasAnnotation(controller, Tag.class),
+                controller.getSimpleName() + " has no @Tag");
 
         for (Method method : controller.getDeclaredMethods()) {
             // @GetMapping, @PostMapping... are themselves annotated with @RequestMapping
             if (AnnotatedElementUtils.hasAnnotation(method, RequestMapping.class)) {
                 String name = controller.getSimpleName() + "." + method.getName();
-                assertTrue(method.isAnnotationPresent(Operation.class), name + " has no @Operation");
-                assertTrue(method.getAnnotationsByType(ApiResponse.class).length > 0, name + " has no @ApiResponse");
+                assertTrue(AnnotatedElementUtils.hasAnnotation(method, Operation.class), name + " has no @Operation");
+                assertFalse(AnnotatedElementUtils.findMergedRepeatableAnnotations(method, ApiResponse.class).isEmpty(),
+                        name + " has no @ApiResponse");
             }
         }
     }

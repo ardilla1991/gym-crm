@@ -101,7 +101,9 @@ public class TrainingServiceImpl implements TrainingService {
     @Transactional(readOnly = true)
     public List<TrainingType> getTrainingTypes(Credentials credentials) {
         userAuthenticator.authenticate(credentials);
+        List<TrainingType> trainingTypes = trainingTypeDao.findAll();
+        log.info("Training types found: by={}, count={}", credentials.username(), trainingTypes.size());
 
-        return trainingTypeDao.findAll();
+        return trainingTypes;
     }
 }

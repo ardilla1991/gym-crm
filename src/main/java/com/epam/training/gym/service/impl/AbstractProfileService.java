@@ -64,7 +64,7 @@ public abstract class AbstractProfileService<M extends UserProfile> implements A
     @Transactional(readOnly = true)
     public boolean matchCredentials(Credentials credentials) {
         boolean matches = findWithCredentials(credentials).isPresent();
-        log.info("{} credentials check: username={}, matches={}", profileName, credentials.username(), matches);
+        log.debug("{} credentials check: username={}, matches={}", profileName, credentials.username(), matches);
         return matches;
     }
 
