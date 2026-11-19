@@ -15,7 +15,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
-/** Web settings on top of Spring Boot's Spring MVC: logging filters, authentication, Credentials arguments. */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 

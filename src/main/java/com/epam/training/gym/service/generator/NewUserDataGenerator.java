@@ -10,10 +10,7 @@ import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Calculates the data of a new Trainee/Trainer profile: username, password and userId.
- * Trainees and trainers share one "users" space, so it looks at both of them.
- */
+/** Username and password of a new trainee or trainer. Usernames are unique across trainees and trainers. */
 @Component
 public class NewUserDataGenerator {
     private static final String PASSWORD_CHARS =
@@ -30,11 +27,7 @@ public class NewUserDataGenerator {
         this.userDao = userDao;
     }
 
-    /**
-     * FirstName.LastName, e.g. John.Smith.
-     * If a trainee or trainer with the same name already exists, a serial number is added:
-     * John.Smith1, John.Smith2, ...
-     */
+    /** FirstName.LastName; if taken, a serial number is added: John.Smith1, John.Smith2, ... */
     public String generateUsername(String firstName, String lastName) {
         String baseUsername = firstName + USERNAME_SEPARATOR + lastName;
 
@@ -49,7 +42,6 @@ public class NewUserDataGenerator {
         return baseUsername + number;
     }
 
-    /** Random string of 10 characters. */
     public String generatePassword() {
         StringBuilder password = new StringBuilder(PasswordPolicy.LENGTH);
         for (int i = 0; i < PasswordPolicy.LENGTH; i++) {

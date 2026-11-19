@@ -19,17 +19,37 @@ One Maven module; the layers are packages.
 
 ## Run
 
-```bash
-# H2: recreated on every start from src/main/resources/db/data.sql
-mvn spring-boot:run
+Each environment is a Spring profile with its own database (`src/main/resources/application-<profile>.yml`).
 
-# PostgreSQL in Docker, profile "postgres" (a local one: add --spring.datasource.username=... --spring.datasource.password=...)
-docker compose up -d
-mvn spring-boot:run -Dspring-boot.run.profiles=postgres -Dspring-boot.run.arguments=--spring.jpa.hibernate.ddl-auto=create   # first start: creates the tables, loads data.sql
-mvn spring-boot:run -Dspring-boot.run.profiles=postgres                                                                     # later starts: keeps the data
+**local** (default): H2 in memory, data from `db/data.sql` on every start.
+```powershell
+mvn spring-boot:run
 ```
 
-In PowerShell quote each option: `"-Dspring-boot.run.profiles=postgres"`. Another port: `"-Dspring-boot.run.arguments=--server.port=9090"`.
+**dev**: PostgreSQL in Docker.
+```powershell
+docker compose up -d
+mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+First start on an empty database: add `"-Dspring-boot.run.arguments=--spring.jpa.hibernate.ddl-auto=create"`.
+
+**stg**: the database comes only from environment variables.
+```powershell
+$env:DB_URL="jdbc:postgresql://localhost:5432/gym_crm"
+$env:DB_USERNAME="gym"
+$env:DB_PASSWORD="gym"
+mvn spring-boot:run "-Dspring-boot.run.profiles=stg"
+```
+
+**prod**: the database comes only from environment variables.
+```powershell
+$env:DB_URL="jdbc:postgresql://localhost:5432/gym_crm"
+$env:DB_USERNAME="gym"
+$env:DB_PASSWORD="gym"
+mvn spring-boot:run "-Dspring-boot.run.profiles=prod"
+```
+
+The start log shows the profile: `The following 1 profile is active: "stg"`.
 
 - Swagger UI: http://localhost:8080/swagger-ui/index.html (**Authorize** with a user below)
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
@@ -97,7 +117,8 @@ Every error has the body `{"status": 404, "error": "Not Found", "message": "..."
 
 ## Logging
 
-Logback, `src/main/resources/logback.xml`.
+Logback, `src/main/resources/logback.xml`: the format and the default log levels.
+A profile overrides them in `application-<profile>.yml`.
 
 - Every call gets a transactionId (from the `X-Transaction-Id` header or a new UUID); it is in every log line of the call
   and in the response header.

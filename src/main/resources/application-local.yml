@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    # DB_CLOSE_DELAY=-1 keeps the database alive while the application is running
+    url: jdbc:h2:mem:gym_crm;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+logging:
+  level:
+    org.hibernate.SQL: DEBUG

@@ -4,7 +4,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Spring Boot: versions of Spring, Hibernate, Jackson, Tomcat, JUnit, Mockito... and plugin defaults -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -39,7 +38,6 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- JDBC drivers: needed only at runtime, the code never imports them -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -51,14 +49,12 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Getters, setters and builders; needed only to compile -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Swagger: OpenAPI JSON and Swagger UI built from the controller annotations -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -107,7 +103,6 @@
                             <goal>prepare-agent</goal>
                         </goals>
                     </execution>
-                    <!-- after tests: builds the HTML report in target/site/jacoco -->
                     <execution>
                         <id>report</id>
                         <phase>test</phase>
@@ -124,7 +119,6 @@
                     <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
                 </configuration>
             </plugin>
-            <!-- Run: mvn spring-boot:run (or run GymApplication from the IDE); mvn package builds an executable jar -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
