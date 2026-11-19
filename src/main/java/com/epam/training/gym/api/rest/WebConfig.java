@@ -44,13 +44,13 @@ public class WebConfig implements WebMvcConfigurer {
 
     /**
      * Every REST call is authenticated before the controller, except registration
-     * (only POST is mapped to these exact paths) and the health check.
+     * (only POST is mapped to these exact paths), the health check and Login, which checks the credentials itself.
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new AuthenticationInterceptor(facade, gymMetrics))
                 .addPathPatterns(ApiPaths.API_V1 + "/**")
-                .excludePathPatterns(ApiPaths.TRAINEES, ApiPaths.TRAINERS, ApiPaths.HEALTH);
+                .excludePathPatterns(ApiPaths.TRAINEES, ApiPaths.TRAINERS, ApiPaths.HEALTH, ApiPaths.LOGIN);
     }
 
     /** Controller methods get the caller's Credentials from the Authorization header. */
