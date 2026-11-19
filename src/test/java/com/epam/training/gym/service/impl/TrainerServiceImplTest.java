@@ -1,5 +1,6 @@
 package com.epam.training.gym.service.impl;
 
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.*;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
@@ -59,6 +60,9 @@ public class TrainerServiceImplTest {
     @Mock
     private NewUserDataGenerator newUserDataGenerator;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     @InjectMocks
     private TrainerServiceImpl trainerService;
 
@@ -79,6 +83,7 @@ public class TrainerServiceImplTest {
         assertSame(saved, result);
         verify(entityValidator).validate(trainer);
         verify(newUserDataGenerator).fillNewUserData(trainer.getUser());
+        verify(gymMetrics).trainerRegistered();
     }
 
     @Test
@@ -108,6 +113,7 @@ public class TrainerServiceImplTest {
         assertThrows(EntityNotFoundException.class, () -> trainerService.create(trainer));
 
         verify(trainerDao, never()).save(any());
+        verify(gymMetrics, never()).trainerRegistered();
     }
 
     // ---------- matchCredentials ----------

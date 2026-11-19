@@ -5,6 +5,7 @@ import com.epam.training.gym.api.rest.auth.AuthenticationInterceptor;
 import com.epam.training.gym.api.rest.auth.CredentialsArgumentResolver;
 import com.epam.training.gym.api.rest.logging.RequestLoggingFilter;
 import com.epam.training.gym.api.rest.logging.TransactionIdFilter;
+import com.epam.training.gym.metrics.GymMetrics;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,9 +20,11 @@ import java.util.List;
 public class WebConfig implements WebMvcConfigurer {
 
     private final GymFacade facade;
+    private final GymMetrics gymMetrics;
 
-    public WebConfig(GymFacade facade) {
+    public WebConfig(GymFacade facade, GymMetrics gymMetrics) {
         this.facade = facade;
+        this.gymMetrics = gymMetrics;
     }
 
     /** Before requestLoggingFilter: the transactionId must be set before the request is logged. */
@@ -45,7 +48,7 @@ public class WebConfig implements WebMvcConfigurer {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new AuthenticationInterceptor(facade))
+        registry.addInterceptor(new AuthenticationInterceptor(facade, gymMetrics))
                 .addPathPatterns(ApiPaths.API_V1 + "/**")
                 .excludePathPatterns(ApiPaths.TRAINEES, ApiPaths.TRAINERS, ApiPaths.HEALTH);
     }

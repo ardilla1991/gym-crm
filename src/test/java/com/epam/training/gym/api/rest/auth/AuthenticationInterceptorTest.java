@@ -5,6 +5,7 @@ import com.epam.training.gym.api.rest.ApiPaths;
 import com.epam.training.gym.api.rest.TestPaths;
 import com.epam.training.gym.api.rest.controller.TraineeController;
 import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.auth.Credentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,12 +31,15 @@ public class AuthenticationInterceptorTest {
     @Mock
     private GymFacade facade;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new TraineeController(facade))
-                .addMappedInterceptors(new String[] {ApiPaths.API_V1 + "/**"}, new AuthenticationInterceptor(facade))
+                .addMappedInterceptors(new String[] {ApiPaths.API_V1 + "/**"}, new AuthenticationInterceptor(facade, gymMetrics))
                 .setCustomArgumentResolvers(new CredentialsArgumentResolver())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -50,6 +54,8 @@ public class AuthenticationInterceptorTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isUnauthorized());
+
+        verify(gymMetrics).authenticationFailed();
     }
 
     @Test
@@ -89,5 +95,7 @@ public class AuthenticationInterceptorTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
+
+        verify(gymMetrics, never()).authenticationFailed();
     }
 }

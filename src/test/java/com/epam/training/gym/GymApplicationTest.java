@@ -57,6 +57,16 @@ public class GymApplicationTest {
     }
 
     @Test
+    void actuatorPrometheus_showsCustomMetrics() throws Exception {
+        HttpResponse<String> response = send("GET", TestPaths.ACTUATOR_PROMETHEUS, null, null);
+
+        assertEquals(200, response.statusCode());
+        assertTrue(response.body().contains("gym_registrations_total{role=\"trainee\"}"), response.body());
+        assertTrue(response.body().contains("gym_trainings_added_total"));
+        assertTrue(response.body().contains("gym_authentication_failures_total"));
+    }
+
+    @Test
     void start_servesOpenApiDocumentation() throws Exception {
         HttpResponse<String> response = send("GET", TestPaths.API_DOCS, null, null);
 

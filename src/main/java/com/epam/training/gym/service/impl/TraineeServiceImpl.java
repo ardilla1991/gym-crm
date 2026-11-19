@@ -1,5 +1,6 @@
 package com.epam.training.gym.service.impl;
 
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.Trainee;
 import com.epam.training.gym.model.Trainer;
 import com.epam.training.gym.model.Training;
@@ -32,6 +33,7 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     private TrainingDao trainingDao;
     private NewUserDataGenerator newUserDataGenerator;
     private EntityValidator entityValidator;
+    private GymMetrics gymMetrics;
 
     public TraineeServiceImpl() {
         super("Trainee");
@@ -62,6 +64,11 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
         this.entityValidator = entityValidator;
     }
 
+    @Autowired
+    public void setGymMetrics(GymMetrics gymMetrics) {
+        this.gymMetrics = gymMetrics;
+    }
+
     @Override
     @Transactional
     public Trainee create(Trainee trainee) {
@@ -69,6 +76,7 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
         newUserDataGenerator.fillNewUserData(trainee.getUser());
         Trainee created = traineeDao.save(trainee);
         log.info("Trainee created: id={}, username={}", created.getId(), created.getUser().getUsername());
+        gymMetrics.traineeRegistered();
 
         // The DAO never returns the password; registration returns the generated one to the new user
         created.getUser().setPassword(trainee.getUser().getPassword());

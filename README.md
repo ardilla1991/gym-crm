@@ -55,6 +55,7 @@ The start log shows the profile: `The following 1 profile is active: "stg"`.
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
 - Health check: http://localhost:8080/api/v1/health
 - Actuator health: http://localhost:8080/actuator/health; own checks: `trainingTypes` (all training types are in the database), `memory` (heap used below 90%)
+- Prometheus metrics: http://localhost:8080/actuator/prometheus; own metrics: `gym_registrations_total` (by role), `gym_trainings_added_total`, `gym_authentication_failures_total`
 
 Users from `data.sql`:
 
