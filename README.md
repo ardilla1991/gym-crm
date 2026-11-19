@@ -76,7 +76,7 @@ Bodies, query parameters and examples are in Swagger UI.
 ## Authentication
 
 HTTP Basic on every call except registration and the health check. The credentials are checked first
-(`AuthenticationInterceptor`), so wrong ones give 401 before any 400 or 403.
+(`AuthenticationInterceptor`; Login checks them itself), so wrong ones give 401 before any 400 or 403.
 Passwords have exactly 10 characters. Basic sends them in plain Base64: fine for this project on HTTP, HTTPS only in production.
 
 ## Errors

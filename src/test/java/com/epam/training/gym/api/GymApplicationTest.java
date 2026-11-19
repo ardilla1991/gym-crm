@@ -93,6 +93,13 @@ public class GymApplicationTest {
     }
 
     @Test
+    void login_wrongPassword_returnsUnauthorized() throws Exception {
+        HttpResponse<String> response = send("GET", TestPaths.LOGIN, TestAuth.basic("Emily.Johnson", "wrong"), null);
+
+        assertEquals(401, response.statusCode());
+    }
+
+    @Test
     void registration_thenLoginAndOwnProfile_succeed() throws Exception {
         HttpResponse<String> registered = send("POST", TestPaths.TRAINEES, null,
                 "{\"firstName\": \"Full\", \"lastName\": \"Stack\"}");
