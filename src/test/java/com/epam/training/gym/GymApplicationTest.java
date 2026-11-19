@@ -45,6 +45,18 @@ public class GymApplicationTest {
     }
 
     @Test
+    void actuatorHealth_isUpWithDetailsAndNoSignIn() throws Exception {
+        HttpResponse<String> response = send("GET", TestPaths.ACTUATOR_HEALTH, null, null);
+
+        assertEquals(200, response.statusCode());
+        JsonNode health = JSON.readTree(response.body());
+        assertEquals("UP", health.get("status").asString());
+        assertEquals("UP", health.at("/components/db/status").asString());
+        assertEquals("UP", health.at("/components/trainingTypes/status").asString());
+        assertEquals("UP", health.at("/components/memory/status").asString());
+    }
+
+    @Test
     void start_servesOpenApiDocumentation() throws Exception {
         HttpResponse<String> response = send("GET", TestPaths.API_DOCS, null, null);
 

@@ -54,6 +54,7 @@ The start log shows the profile: `The following 1 profile is active: "stg"`.
 - Swagger UI: http://localhost:8080/swagger-ui/index.html (**Authorize** with a user below)
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
 - Health check: http://localhost:8080/api/v1/health
+- Actuator health: http://localhost:8080/actuator/health; own checks: `trainingTypes` (all training types are in the database), `memory` (heap used below 90%)
 
 Users from `data.sql`:
 

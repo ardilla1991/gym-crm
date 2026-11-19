@@ -9,3 +9,11 @@ spring:
     properties:
       # Runs only when Hibernate creates the schema
       jakarta.persistence.sql-load-script-source: db/data.sql
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
