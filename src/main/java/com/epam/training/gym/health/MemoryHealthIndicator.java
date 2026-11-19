@@ -33,6 +33,11 @@ public class MemoryHealthIndicator extends AbstractHealthIndicator {
     @Override
     protected void doHealthCheck(Health.Builder builder) {
         MemoryUsage heap = memory.getHeapMemoryUsage();
+        // max is -1 when the heap limit is not defined: nothing to compare with
+        if (heap.getMax() <= 0) {
+            builder.unknown().withDetail("usedBytes", heap.getUsed());
+            return;
+        }
         boolean high = heap.getUsed() > heap.getMax() * MAX_USED_RATIO;
         if (high) {
             log.warn("Heap usage is high: {} of {} bytes", heap.getUsed(), heap.getMax());

@@ -33,4 +33,18 @@ public class MemoryHealthIndicatorTest {
 
         assertEquals(Status.DOWN, indicator.health().getStatus());
     }
+
+    @Test
+    void health_noHeapLimit_isUnknown() {
+        when(memory.getHeapMemoryUsage()).thenReturn(new MemoryUsage(0, 950, 1000, -1));
+
+        assertEquals(Status.UNKNOWN, indicator.health().getStatus());
+    }
+
+    @Test
+    void health_exactlyAtLimit_isUp() {
+        when(memory.getHeapMemoryUsage()).thenReturn(new MemoryUsage(0, 900, 1000, 1000));
+
+        assertEquals(Status.UP, indicator.health().getStatus());
+    }
 }

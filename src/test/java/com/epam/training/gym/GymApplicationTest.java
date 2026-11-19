@@ -6,6 +6,7 @@ import com.epam.training.gym.model.validation.FieldLimits;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.ActiveProfiles;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -23,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Starts the whole application once on a free port and calls it over HTTP: no mocks, H2 with data.sql.
  * The tests only add new users and never change the existing ones, so their order does not matter.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "logging.level.org.hibernate.SQL=WARN")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
 public class GymApplicationTest {
 
     /** A trainee from data.sql. */
