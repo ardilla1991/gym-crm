@@ -1,9 +1,9 @@
 package com.epam.training.gym.persistence.dao;
 
 import jakarta.persistence.EntityManagerFactory;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -16,8 +16,11 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 import java.io.IOException;
 
-/** JPA on an in-memory H2 database for DAO tests. */
-@Configuration
+/**
+ * JPA on an in-memory H2 database for DAO tests.
+ * A test configuration: the application's component scan in @SpringBootTest skips it.
+ */
+@TestConfiguration
 @ComponentScan("com.epam.training.gym.persistence.dao")
 @EnableTransactionManagement
 public class TestJpaConfig {

@@ -1,0 +1,18 @@
+# Default: H2 in-memory database, works without any installation.
+# Tables and data.sql are created on every start.
+spring:
+  application:
+    name: gym-crm
+  datasource:
+    # DB_CLOSE_DELAY=-1 keeps the database alive while the application is running
+    url: jdbc:h2:mem:gym_crm;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    # Entities are loaded only inside the service transactions, not while the response is written
+    open-in-view: false
+    properties:
+      # Initial data, executed by Hibernate right after the tables are created (only when the schema is created)
+      jakarta.persistence.sql-load-script-source: db/data.sql

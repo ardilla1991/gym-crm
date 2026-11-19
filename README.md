@@ -1,6 +1,6 @@
 # Gym CRM
 
-REST API for a gym CRM on plain Spring Framework 7 (no Spring Boot): Spring MVC on embedded Tomcat,
+REST API for a gym CRM on Spring Boot 4: Spring MVC on embedded Tomcat,
 JPA with Hibernate, H2 or PostgreSQL. Requirements: JDK 21, Maven 3.9+; optional Docker or a local PostgreSQL.
 
 ## Layers
@@ -10,25 +10,26 @@ One Maven module; the layers are packages.
 | Package       | What is there                                                             | Works with                      |
 |---------------|---------------------------------------------------------------------------|---------------------------------|
 | `api.rest`    | REST controllers, DTOs and their mappers, error handling, logging filters | DTOs outside, models inside     |
-| `api`         | `Main`, `GymApplication` (embedded Tomcat), `GymFacade`                   | models                          |
+| `api`         | `GymFacade`                                                               | models                          |
 | `service`     | business logic, model validation                                          | models                          |
 | `persistence` | DAOs; JPA entities and mappers                                            | models outside, entities inside |
 | `model`       | models: Lombok and validation, no JPA                                     | —                               |
-| `config`      | Spring and database configuration                                         | —                               |
+
+`GymApplication` (the root package) starts Spring Boot. Settings: `src/main/resources/application.yml`.
 
 ## Run
 
 ```bash
 # H2: recreated on every start from src/main/resources/db/data.sql
-mvn compile exec:java
+mvn spring-boot:run
 
-# PostgreSQL in Docker (a local one: add -Ddb.username=... -Ddb.password=...)
+# PostgreSQL in Docker, profile "postgres" (a local one: add --spring.datasource.username=... --spring.datasource.password=...)
 docker compose up -d
-mvn compile exec:java -Ddb=postgres -Ddb.schema=create   # first start: creates the tables, loads data.sql
-mvn compile exec:java -Ddb=postgres                      # later starts: keeps the data
+mvn spring-boot:run -Dspring-boot.run.profiles=postgres -Dspring-boot.run.arguments=--spring.jpa.hibernate.ddl-auto=create   # first start: creates the tables, loads data.sql
+mvn spring-boot:run -Dspring-boot.run.profiles=postgres                                                                     # later starts: keeps the data
 ```
 
-In PowerShell quote each option: `"-Ddb=postgres"`. Another port: `-Dserver.port=9090`.
+In PowerShell quote each option: `"-Dspring-boot.run.profiles=postgres"`. Another port: `"-Dspring-boot.run.arguments=--server.port=9090"`.
 
 - Swagger UI: http://localhost:8080/swagger-ui/index.html (**Authorize** with a user below)
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
