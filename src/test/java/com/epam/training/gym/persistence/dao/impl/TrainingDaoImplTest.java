@@ -144,6 +144,25 @@ public class TrainingDaoImplTest {
     }
 
     @Test
+    void findTraineeTrainings_trainerFullName_ignoresCase() {
+        TraineeTrainingCriteria criteria = TraineeTrainingCriteria.builder()
+                .trainerName("anna LEE")
+                .build();
+
+        assertEquals(List.of("Yoga Jan", "Yoga Mar"),
+                names(trainingDao.findTraineeTrainings("John.Smith", criteria)));
+    }
+
+    @Test
+    void findTraineeTrainings_trainerLastNameOnly_findsNothing() {
+        TraineeTrainingCriteria criteria = TraineeTrainingCriteria.builder()
+                .trainerName("Lee")
+                .build();
+
+        assertTrue(trainingDao.findTraineeTrainings("John.Smith", criteria).isEmpty());
+    }
+
+    @Test
     void findTraineeTrainings_trainingType_filtersByType() {
         TraineeTrainingCriteria criteria = TraineeTrainingCriteria.builder()
                 .trainingType(TrainingTypeName.FITNESS)
@@ -184,6 +203,16 @@ public class TrainingDaoImplTest {
     void findTrainerTrainings_traineeName_ignoresCase() {
         TrainerTrainingCriteria criteria = TrainerTrainingCriteria.builder()
                 .traineeName("MARY")
+                .build();
+
+        assertEquals(List.of("Mary yoga"),
+                names(trainingDao.findTrainerTrainings("Anna.Lee", criteria)));
+    }
+
+    @Test
+    void findTrainerTrainings_traineeFullName_findsTrainings() {
+        TrainerTrainingCriteria criteria = TrainerTrainingCriteria.builder()
+                .traineeName("Mary Jones")
                 .build();
 
         assertEquals(List.of("Mary yoga"),

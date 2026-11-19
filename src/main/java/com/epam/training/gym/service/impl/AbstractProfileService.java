@@ -8,6 +8,7 @@ import com.epam.training.gym.service.AccountService;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,29 +64,20 @@ public abstract class AbstractProfileService<M extends UserProfile> implements A
     @Transactional(readOnly = true)
     public boolean matchCredentials(Credentials credentials) {
         boolean matches = findWithCredentials(credentials).isPresent();
-        log.info("{} credentials check: username={}, matches={}", profileName, credentials.username(), matches);
+        log.debug("{} credentials check: username={}, matches={}", profileName, credentials.username(), matches);
         return matches;
     }
 
     @Override
     @Transactional
-    public void changePassword(Credentials credentials, String newPassword) {
+    public void changeActiveStatus(Credentials credentials, boolean active) {
         User user = authenticate(credentials).getUser();
-        if (newPassword == null || newPassword.isBlank()) {
-            throw new IllegalArgumentException("New password must not be blank");
+        if (user.isActive() == active) {
+            throw new InvalidStateException(profileName + " is already " + statusName(active));
         }
-        userDao.updatePassword(user, newPassword);
-        log.info("{} password changed: username={}", profileName, credentials.username());
-    }
-
-    @Override
-    @Transactional
-    public boolean toggleActive(Credentials credentials) {
-        User user = authenticate(credentials).getUser();
-        user.setActive(!user.isActive());
+        user.setActive(active);
         userDao.updateActive(user);
-        log.info("{} {} is now {}", profileName, user.getUsername(), user.isActive() ? "active" : "inactive");
-        return user.isActive();
+        log.info("{} {} is now {}", profileName, user.getUsername(), statusName(active));
     }
 
     /** The caller's own profile, if the credentials are right; every operation except create starts with it. */
@@ -98,9 +90,20 @@ public abstract class AbstractProfileService<M extends UserProfile> implements A
         });
     }
 
+    private static String statusName(boolean active) {
+        return active ? "active" : "inactive";
+    }
+
     private Optional<M> findWithCredentials(Credentials credentials) {
         return userAuthenticator.matches(credentials)
                 ? findByUsername(credentials.username())
                 : Optional.empty();
+    }
+
+    /** Like authenticate, but loads the profile with its linked list: for operations that return the profile. */
+    protected M authenticateWithDetails(Credentials credentials) {
+        authenticate(credentials);
+        return findProfileByUsername(credentials.username())
+                .orElseThrow(() -> new EntityNotFoundException(profileName, credentials.username()));
     }
 }

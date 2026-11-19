@@ -41,7 +41,12 @@ public class TrainerDaoImpl implements TrainerDao {
     @Override
     public Optional<Trainer> findByUsername(String username) {
         return entityManager
-                .createQuery("SELECT t FROM Trainer t WHERE t.user.username = :username", TrainerEntity.class)
+                .createQuery("""
+                        SELECT t FROM Trainer t
+                        JOIN FETCH t.user
+                        JOIN FETCH t.specialization
+                        WHERE t.user.username = :username
+                        """, TrainerEntity.class)
                 .setParameter("username", username)
                 .getResultStream()
                 .findFirst()
@@ -54,7 +59,12 @@ public class TrainerDaoImpl implements TrainerDao {
             return List.of();   // no need to query the database
         }
         return entityManager
-                .createQuery("SELECT t FROM Trainer t WHERE t.user.username IN :usernames", TrainerEntity.class)
+                .createQuery("""
+                        SELECT t FROM Trainer t
+                        JOIN FETCH t.user
+                        JOIN FETCH t.specialization
+                        WHERE t.user.username IN :usernames
+                        """, TrainerEntity.class)
                 .setParameter("usernames", usernames)
                 .getResultStream()
                 .map(TrainerEntityMapper::toModel)
@@ -62,10 +72,13 @@ public class TrainerDaoImpl implements TrainerDao {
     }
 
     @Override
-    public List<Trainer> findNotAssignedToTrainee(String traineeUsername) {
+    public List<Trainer> findActiveNotAssignedToTrainee(String traineeUsername) {
         return entityManager.createQuery("""
                     SELECT tr FROM Trainer tr
-                    WHERE tr NOT IN (
+                    JOIN FETCH tr.user
+                    JOIN FETCH tr.specialization
+                    WHERE tr.user.isActive = true
+                    AND tr NOT IN (
                         SELECT assigned FROM Trainee te JOIN te.trainers assigned
                         WHERE te.user.username = :username)
                     """, TrainerEntity.class)
@@ -96,6 +109,7 @@ public class TrainerDaoImpl implements TrainerDao {
         TrainerEntity entity = entityManager.find(TrainerEntity.class, trainer.getId());
         entity.getUser().setFirstName(trainer.getUser().getFirstName());
         entity.getUser().setLastName(trainer.getUser().getLastName());
+        entity.getUser().setActive(trainer.getUser().isActive());
         log.debug("Trainer updated: id={}", entity.getId());
 
         return TrainerEntityMapper.toModel(entity);

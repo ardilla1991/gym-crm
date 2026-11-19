@@ -1,5 +1,6 @@
 package com.epam.training.gym.persistence.entity;
 
+import com.epam.training.gym.model.validation.FieldLimits;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,7 +34,7 @@ public class TraineeEntity {
 
     /** Personal data: excluded from toString() so it does not end up in logs. */
     @ToString.Exclude
-    @Column(name = "address")
+    @Column(name = "address", length = FieldLimits.ADDRESS_MAX)
     private String address;
 
     /** Saved and deleted together with the trainee. */

@@ -15,7 +15,7 @@ public interface TraineeDao {
     /** Like findByUsername, but also loads the trainee's trainers: for returning the profile. */
     Optional<Trainee> findByUsernameWithTrainers(String username);
 
-    /** Saves the first and last name, date of birth and address; other fields are not changed. */
+    /** Saves the first and last name, status, date of birth and address; other fields are not changed. */
     Trainee update(Trainee trainee);
 
     /** Hard delete: the trainee's user, trainings and trainer assignments are deleted too. */

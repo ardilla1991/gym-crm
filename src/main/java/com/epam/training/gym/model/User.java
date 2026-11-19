@@ -1,6 +1,6 @@
 package com.epam.training.gym.model;
 
-import jakarta.validation.constraints.NotBlank;
+import com.epam.training.gym.model.validation.PersonName;
 import lombok.*;
 
 /** Common data of a trainee or a trainer: name, username, password and status. */
@@ -14,10 +14,10 @@ public class User {
 
     private Long id;
 
-    @NotBlank
+    @PersonName
     private String firstName;
 
-    @NotBlank
+    @PersonName
     private String lastName;
 
     /** Unique among all users, so a trainee and a trainer can never share a username. */

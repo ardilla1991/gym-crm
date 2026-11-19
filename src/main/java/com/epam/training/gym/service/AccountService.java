@@ -25,19 +25,11 @@ public interface AccountService<T extends UserProfile>  {
      */
     T getProfile(Credentials credentials, String username);
 
-
     /**
-     * Changes the password for a user with the given credentials.
+     * Activates or deactivates the user.
+     * Not idempotent: setting the status the user already has is an error.
      * @throws com.epam.training.gym.service.exception.AuthenticationException if the credentials are wrong
-     * @throws IllegalArgumentException if the new password is blank
+     * @throws com.epam.training.gym.service.exception.InvalidStateException if the user already has this status
      */
-    void changePassword(Credentials credentials, String newPassword);
-
-    /**
-     * Activates an inactive user and deactivates an active one.
-     * Not idempotent: calling it twice returns the user to the original status.
-     * @return the new status: true if the user is active now
-     * @throws com.epam.training.gym.service.exception.AuthenticationException if the credentials are wrong
-     */
-    boolean toggleActive(Credentials credentials);
+    void changeActiveStatus(Credentials credentials, boolean active);
 }

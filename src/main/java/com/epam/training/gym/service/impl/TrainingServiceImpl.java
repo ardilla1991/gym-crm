@@ -4,7 +4,6 @@ import com.epam.training.gym.model.Trainee;
 import com.epam.training.gym.model.Trainer;
 import com.epam.training.gym.model.Training;
 import com.epam.training.gym.model.TrainingType;
-import com.epam.training.gym.model.TrainingTypeName;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.persistence.dao.TraineeDao;
 import com.epam.training.gym.persistence.dao.TrainerDao;
@@ -12,6 +11,7 @@ import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.persistence.dao.TrainingTypeDao;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainingService;
+import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.validation.EntityValidator;
@@ -20,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class TrainingServiceImpl implements TrainingService {
@@ -32,6 +34,7 @@ public class TrainingServiceImpl implements TrainingService {
     private TrainingDao trainingDao;
     private TrainingTypeDao trainingTypeDao;
     private EntityValidator entityValidator;
+    private UserAuthenticator userAuthenticator;
 
     @Autowired
     public void setTraineeService(TraineeService traineeService) {
@@ -63,6 +66,11 @@ public class TrainingServiceImpl implements TrainingService {
         this.entityValidator = entityValidator;
     }
 
+    @Autowired
+    public void setUserAuthenticator(UserAuthenticator userAuthenticator) {
+        this.userAuthenticator = userAuthenticator;
+    }
+
     @Override
     @Transactional
     public Training addTraining(Credentials traineeCredentials, String trainerUsername, Training training) {
@@ -73,14 +81,11 @@ public class TrainingServiceImpl implements TrainingService {
         if (!trainer.getUser().isActive()) {
             throw new InvalidStateException("Trainer " + trainerUsername + " is not active");
         }
-        TrainingType trainingType = training.getTrainingType() != null
-                ? findTrainingType(training.getTrainingType().getTrainingTypeName())
-                : null;
-
+        // The request has no training type: a training has the type of the trainer's specialization.
         // The model is validated complete: with the trainee, the trainer and the type found above
         training.setTrainee(trainee);
         training.setTrainer(trainer);
-        training.setTrainingType(trainingType);
+        training.setTrainingType(trainer.getSpecialization());
         entityValidator.validate(training);
 
         // A trainee who trains with a trainer has this trainer in the list
@@ -92,8 +97,13 @@ public class TrainingServiceImpl implements TrainingService {
         return saved;
     }
 
-    private TrainingType findTrainingType(TrainingTypeName name) {
-        return trainingTypeDao.findByName(name)
-                .orElseThrow(() -> new EntityNotFoundException("Training type", name));
+    @Override
+    @Transactional(readOnly = true)
+    public List<TrainingType> getTrainingTypes(Credentials credentials) {
+        userAuthenticator.authenticate(credentials);
+        List<TrainingType> trainingTypes = trainingTypeDao.findAll();
+        log.info("Training types found: by={}, count={}", credentials.username(), trainingTypes.size());
+
+        return trainingTypes;
     }
 }

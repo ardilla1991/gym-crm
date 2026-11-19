@@ -1,6 +1,7 @@
 package com.epam.training.gym.service.generator;
 
 import com.epam.training.gym.model.User;
+import com.epam.training.gym.model.auth.PasswordPolicy;
 import com.epam.training.gym.persistence.dao.UserDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,6 @@ import java.util.Set;
 public class NewUserDataGenerator {
     private static final String PASSWORD_CHARS =
             "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@";
-    private static final int PASSWORD_LENGTH = 10;
     private static final String USERNAME_SEPARATOR = ".";
 
     /** SecureRandom instead of Random: passwords must not be predictable. */
@@ -51,8 +51,8 @@ public class NewUserDataGenerator {
 
     /** Random string of 10 characters. */
     public String generatePassword() {
-        StringBuilder password = new StringBuilder(PASSWORD_LENGTH);
-        for (int i = 0; i < PASSWORD_LENGTH; i++) {
+        StringBuilder password = new StringBuilder(PasswordPolicy.LENGTH);
+        for (int i = 0; i < PasswordPolicy.LENGTH; i++) {
             int index = random.nextInt(PASSWORD_CHARS.length());
             password.append(PASSWORD_CHARS.charAt(index));
         }

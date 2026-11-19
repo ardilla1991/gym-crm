@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TrainerDaoImplTest {
 
     private static final Long YOGA_ID = 2L;
+    private static final Long FITNESS_ID = 1L;
+    private static final Long ZUMBA_ID = 3L;
 
     @Autowired
     private TrainerDao trainerDao;
@@ -72,6 +74,18 @@ public class TrainerDaoImplTest {
     }
 
     @Test
+    void findByUsername_loadsUserAndSpecializationInSameQuery() {
+        persist(newTrainer("Anna.Lee", yoga));
+        flushAndClear();
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        Trainer found = trainerDao.findByUsername("Anna.Lee").orElseThrow();
+
+        assertEquals(TrainingTypeName.YOGA, found.getSpecialization().getTrainingTypeName());
+        assertEquals(1, queries.count());
+    }
+
+    @Test
     void findByUsernames_returnsOnlyRequestedTrainers() {
         persist(newTrainer("Anna.Lee", yoga));
         persist(newTrainer("Mark.Hill", yoga));
@@ -89,7 +103,22 @@ public class TrainerDaoImplTest {
     }
 
     @Test
-    void findNotAssignedToTrainee_returnsTrainersMissingFromTraineesList() {
+    void findByUsernames_loadsAllTrainersInOneQuery() {
+        // Different specializations: without JOIN FETCH each type would need its own SELECT
+        persist(newTrainer("Anna.Lee", yoga));
+        persist(newTrainer("Mark.Hill", entityManager.find(TrainingTypeEntity.class, FITNESS_ID)));
+        persist(newTrainer("Bob.Ross", entityManager.find(TrainingTypeEntity.class, ZUMBA_ID)));
+        flushAndClear();
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        List<Trainer> found = trainerDao.findByUsernames(List.of("Anna.Lee", "Mark.Hill", "Bob.Ross"));
+
+        assertEquals(3, found.size());
+        assertEquals(1, queries.count());
+    }
+
+    @Test
+    void findActiveNotAssignedToTrainee_returnsTrainersMissingFromTraineesList() {
         TrainerEntity anna = persist(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
         persist(newTrainer("Mark", "Hill", "Mark.Hill", yoga));
         persist(newTrainer("Bob", "Ross", "Bob.Ross", yoga));
@@ -98,21 +127,35 @@ public class TrainerDaoImplTest {
         entityManager.persist(john);
         flushAndClear();
 
-        List<Trainer> found = trainerDao.findNotAssignedToTrainee("John.Smith");
+        List<Trainer> found = trainerDao.findActiveNotAssignedToTrainee("John.Smith");
 
         assertEquals(Set.of("Mark.Hill", "Bob.Ross"), usernames(found));
     }
 
     @Test
-    void findNotAssignedToTrainee_traineeWithoutTrainers_returnsAllTrainers() {
+    void findActiveNotAssignedToTrainee_traineeWithoutTrainers_returnsAllActiveTrainers() {
         persist(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
         persist(newTrainer("Mark", "Hill", "Mark.Hill", yoga));
         entityManager.persist(newTrainee("John.Smith"));
         flushAndClear();
 
-        List<Trainer> found = trainerDao.findNotAssignedToTrainee("John.Smith");
+        List<Trainer> found = trainerDao.findActiveNotAssignedToTrainee("John.Smith");
 
         assertEquals(Set.of("Anna.Lee", "Mark.Hill"), usernames(found));
+    }
+
+    @Test
+    void findActiveNotAssignedToTrainee_skipsInactiveTrainers() {
+        persist(newTrainer("Anna", "Lee", "Anna.Lee", yoga));
+        TrainerEntity mark = newTrainer("Mark", "Hill", "Mark.Hill", yoga);
+        mark.getUser().setActive(false);    // Mark is not assigned, but inactive
+        persist(mark);
+        entityManager.persist(newTrainee("John.Smith"));
+        flushAndClear();
+
+        List<Trainer> found = trainerDao.findActiveNotAssignedToTrainee("John.Smith");
+
+        assertEquals(Set.of("Anna.Lee"), usernames(found));
     }
 
     @Test
@@ -140,12 +183,13 @@ public class TrainerDaoImplTest {
     }
 
     @Test
-    void update_savesFirstAndLastNameOnly() {
+    void update_savesNamesAndStatusOnly() {
         TrainerEntity anna = persist(newTrainer("Anna.Lee", yoga));
         flushAndClear();
         Trainer trainer = trainerDao.findByUsername("Anna.Lee").orElseThrow();
         trainer.getUser().setFirstName("Annie");
         trainer.getUser().setLastName("Leeson");
+        trainer.getUser().setActive(false);
 
         Trainer updated = trainerDao.update(trainer);
         flushAndClear();
@@ -154,6 +198,7 @@ public class TrainerDaoImplTest {
         UserEntity saved = entityManager.find(TrainerEntity.class, anna.getId()).getUser();
         assertEquals("Annie", saved.getFirstName());
         assertEquals("Leeson", saved.getLastName());
+        assertFalse(saved.isActive());
         assertEquals("Anna.Lee", saved.getUsername());
         assertEquals("abcde12345", saved.getPassword());
     }

@@ -10,6 +10,8 @@ import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidInputException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
 import jakarta.validation.ConstraintViolationException;
@@ -18,7 +20,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -39,7 +40,6 @@ public class TraineeServiceImplTest {
 
     private static final String USERNAME = "John.Smith";
     private static final String CURRENT_PASSWORD = "abcdef1234";
-    private static final String NEW_PASSWORD = "newPass123";
 
     private static final Credentials VALID_CREDENTIALS = new Credentials(USERNAME, CURRENT_PASSWORD);
     private static final Credentials WRONG_PASSWORD_CREDENTIALS = new Credentials(USERNAME, "wrong");
@@ -144,64 +144,57 @@ public class TraineeServiceImplTest {
         assertFalse(traineeService.matchCredentials(VALID_CREDENTIALS));
     }
 
-    // ---------- changePassword ----------
+    // ---------- authenticate ----------
 
     @Test
-    void changePassword_rightCredentials_savesNewPassword() {
+    void authenticate_rightPassword_returnsOwnProfile() {
         Trainee trainee = signIn(true);
 
-        traineeService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD);
-
-        verify(userDao).updatePassword(trainee.getUser(), NEW_PASSWORD);
+        assertSame(trainee, traineeService.authenticate(VALID_CREDENTIALS));
     }
 
     @Test
-    void changePassword_wrongPassword_throwsAndKeepsOldPassword() {
-        assertThrows(AuthenticationException.class,
-                () -> traineeService.changePassword(WRONG_PASSWORD_CREDENTIALS, NEW_PASSWORD));
+    void authenticate_wrongPassword_throws() {
+        assertThrows(AuthenticationException.class, () -> traineeService.authenticate(WRONG_PASSWORD_CREDENTIALS));
 
-        verify(userDao, never()).updatePassword(any(), any());
+        verify(traineeDao, never()).findByUsername(any());
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" ", "\t"})
-    void changePassword_blankNewPassword_throwsAndKeepsOldPassword(String newPassword) {
-        signIn(true);
+    // ---------- changeActiveStatus ----------
 
-        assertThrows(IllegalArgumentException.class, () -> traineeService.changePassword(VALID_CREDENTIALS, newPassword));
+    @Test
+    void changeActiveStatus_inactiveTrainee_activates() {
+        Trainee trainee = signIn(false);
 
-        verify(userDao, never()).updatePassword(any(), any());
+        traineeService.changeActiveStatus(VALID_CREDENTIALS, true);
+
+        assertTrue(trainee.getUser().isActive());
+        verify(userDao).updateActive(trainee.getUser());
     }
 
     @Test
-    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword() {
-        assertThrows(AuthenticationException.class,
-                () -> traineeService.changePassword(WRONG_PASSWORD_CREDENTIALS, " "));
-    }
-
-    // ---------- toggleActive ----------
-
-    @Test
-    void toggleActive_activeTrainee_becomesInactive() {
+    void changeActiveStatus_activeTrainee_deactivates() {
         Trainee trainee = signIn(true);
 
-        assertFalse(traineeService.toggleActive(VALID_CREDENTIALS));
+        traineeService.changeActiveStatus(VALID_CREDENTIALS, false);
+
         assertFalse(trainee.getUser().isActive());
         verify(userDao).updateActive(trainee.getUser());
     }
 
     @Test
-    void toggleActive_calledTwice_returnsToOriginalStatus() {
-        signIn(false);
+    void changeActiveStatus_sameStatus_throwsAndKeepsStatus() {
+        signIn(true);
 
-        assertTrue(traineeService.toggleActive(VALID_CREDENTIALS));      // inactive -> active
-        assertFalse(traineeService.toggleActive(VALID_CREDENTIALS));     // active -> inactive: not idempotent
+        assertThrows(InvalidStateException.class, () -> traineeService.changeActiveStatus(VALID_CREDENTIALS, true));
+
+        verify(userDao, never()).updateActive(any());
     }
 
     @Test
-    void toggleActive_wrongPassword_throwsAndKeepsStatus() {
-        assertThrows(AuthenticationException.class, () -> traineeService.toggleActive(WRONG_PASSWORD_CREDENTIALS));
+    void changeActiveStatus_wrongPassword_throwsAndKeepsStatus() {
+        assertThrows(AuthenticationException.class,
+                () -> traineeService.changeActiveStatus(WRONG_PASSWORD_CREDENTIALS, false));
 
         verify(userDao, never()).updateActive(any());
     }
@@ -264,7 +257,7 @@ public class TraineeServiceImplTest {
     @Test
     void update_changesOnlyAllowedFields() {
         Trainee trainee = signIn(true);
-        when(traineeDao.update(trainee)).thenReturn(trainee);
+        when(traineeDao.findByUsernameWithTrainers(USERNAME)).thenReturn(Optional.of(trainee));
         Trainee newData = Trainee.builder()
                 .dateOfBirth(LocalDate.of(2000, 5, 5))
                 .address("9 New Road")
@@ -273,7 +266,7 @@ public class TraineeServiceImplTest {
                         .lastName("Smithers")
                         .username("Someone.Else")      // must be ignored
                         .password("hacked")            // must be ignored
-                        .isActive(false)               // must be ignored
+                        .isActive(false)               // the status is updated too
                         .build())
                 .build();
 
@@ -287,7 +280,8 @@ public class TraineeServiceImplTest {
         assertEquals("9 New Road", trainee.getAddress());
         assertEquals(USERNAME, trainee.getUser().getUsername());
         assertNull(trainee.getUser().getPassword());
-        assertTrue(trainee.getUser().isActive());
+        assertFalse(trainee.getUser().isActive());
+        // The caller gets the updated profile with its trainers list
         assertSame(trainee, result);
     }
 
@@ -301,7 +295,8 @@ public class TraineeServiceImplTest {
 
     @Test
     void update_invalidData_isRejectedAndChangesNothing() {
-        signIn(true);
+        Trainee trainee = signIn(true);
+        when(traineeDao.findByUsernameWithTrainers(USERNAME)).thenReturn(Optional.of(trainee));
         Trainee newData = Trainee.builder().build();
         doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(newData);
 
@@ -358,16 +353,37 @@ public class TraineeServiceImplTest {
         verify(trainingDao, never()).findTraineeTrainings(any(), any());
     }
 
+    @Test
+    void getTrainings_fromDateAfterToDate_throwsAndDoesNotSearch() {
+        signIn(true);
+        TraineeTrainingCriteria criteria = TraineeTrainingCriteria.builder()
+                .fromDate(LocalDate.of(2026, 5, 2))
+                .toDate(LocalDate.of(2026, 5, 1))
+                .build();
+
+        assertThrows(InvalidInputException.class, () -> traineeService.getTrainings(VALID_CREDENTIALS, criteria));
+        verify(trainingDao, never()).findTraineeTrainings(any(), any());
+    }
+
     // ---------- getUnassignedTrainers ----------
 
     @Test
     void getUnassignedTrainers_returnsDaoResult() {
         signIn(true);
-        when(trainerDao.findNotAssignedToTrainee(USERNAME)).thenReturn(List.of(trainerWithUsername("Mark.Hill")));
+        when(trainerDao.findActiveNotAssignedToTrainee(USERNAME))
+                .thenReturn(List.of(trainerWithUsername("Mark.Hill")));
 
         List<Trainer> result = traineeService.getUnassignedTrainers(VALID_CREDENTIALS);
 
         assertEquals(List.of("Mark.Hill"), result.stream().map(trainer -> trainer.getUser().getUsername()).toList());
+    }
+
+    @Test
+    void getUnassignedTrainers_wrongPassword_doesNotSearch() {
+        assertThrows(AuthenticationException.class,
+                () -> traineeService.getUnassignedTrainers(WRONG_PASSWORD_CREDENTIALS));
+
+        verify(trainerDao, never()).findActiveNotAssignedToTrainee(any());
     }
 
     // ---------- updateTrainers ----------
@@ -404,7 +420,7 @@ public class TraineeServiceImplTest {
     void updateTrainers_invalidList_throwsAndKeepsOldList(List<String> trainerUsernames) {
         signIn(true);
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(InvalidInputException.class,
                 () -> traineeService.updateTrainers(VALID_CREDENTIALS, trainerUsernames));
 
         verify(trainerDao, never()).findByUsernames(any());

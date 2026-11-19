@@ -1,5 +1,6 @@
 package com.epam.training.gym.persistence.entity;
 
+import com.epam.training.gym.model.validation.FieldLimits;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,7 +36,7 @@ public class TrainingEntity {
     @JoinColumn(name = "trainer_id", nullable = false)
     private TrainerEntity trainer;
 
-    @Column(name = "training_name", nullable = false)
+    @Column(name = "training_name", nullable = false, length = FieldLimits.TRAINING_NAME_MAX)
     private String trainingName;
 
     @ManyToOne(optional = false)

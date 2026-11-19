@@ -9,6 +9,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -29,5 +30,14 @@ public class TrainingTypeDaoImpl implements TrainingTypeDao {
                 .getResultStream()
                 .findFirst()
                 .map(TrainingTypeEntityMapper::toModel);
+    }
+
+    @Override
+    public List<TrainingType> findAll() {
+        return entityManager
+                .createQuery("SELECT t FROM TrainingType t ORDER BY t.trainingTypeName", TrainingTypeEntity.class)
+                .getResultStream()
+                .map(TrainingTypeEntityMapper::toModel)
+                .toList();
     }
 }

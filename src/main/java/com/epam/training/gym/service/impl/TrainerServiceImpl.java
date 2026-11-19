@@ -13,6 +13,7 @@ import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
+import com.epam.training.gym.service.validation.TrainingPeriodValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,16 +88,19 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     @Override
     @Transactional
     public Trainer update(Credentials credentials, Trainer newData) {
-        Trainer trainer = authenticate(credentials);
+        // Loads the trainer with the trainees list: the response returns the whole profile
+        Trainer trainer = authenticateWithDetails(credentials);
         // Only the user part is validated: the specialization is not changed, so it may be missing here
         entityValidator.validate(newData.getUser());
 
+        // The specialization is read-only
         trainer.getUser().setFirstName(newData.getUser().getFirstName());
         trainer.getUser().setLastName(newData.getUser().getLastName());
-        Trainer updated = trainerDao.update(trainer);
+        trainer.getUser().setActive(newData.getUser().isActive());
+        trainerDao.update(trainer);
         log.info("Trainer profile updated: username={}", credentials.username());
 
-        return updated;
+        return trainer;
     }
 
     @Override
@@ -104,6 +108,7 @@ public class TrainerServiceImpl extends AbstractProfileService<Trainer>
     public List<Training> getTrainings(Credentials credentials, TrainerTrainingCriteria criteria) {
         authenticate(credentials);
         TrainerTrainingCriteria filters = criteria != null ? criteria : TrainerTrainingCriteria.builder().build();
+        TrainingPeriodValidator.validate(filters.fromDate(), filters.toDate());
         List<Training> trainings = trainingDao.findTrainerTrainings(credentials.username(), filters);
         log.info("Trainer trainings found: username={}, count={}", credentials.username(), trainings.size());
 

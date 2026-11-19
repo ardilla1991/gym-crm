@@ -17,8 +17,10 @@ public interface TraineeService extends AccountService<Trainee> {
     Trainee create(Trainee trainee);
 
     /**
-     * Updates first name, last name, date of birth and address.
-     * Username, password and status are not changed here.
+     * Updates first name, last name, active status, date of birth and address.
+     * Username and password are not changed here.
+     * @return the updated trainee with the trainers list loaded
+     * @throws com.epam.training.gym.service.exception.AuthenticationException if the credentials are wrong
      * @throws jakarta.validation.ConstraintViolationException if a required field is missing
      */
     Trainee update(Credentials credentials, Trainee newData);
@@ -29,7 +31,10 @@ public interface TraineeService extends AccountService<Trainee> {
     /** The trainee's trainings; null criteria means no filters. */
     List<Training> getTrainings(Credentials credentials, TraineeTrainingCriteria criteria);
 
-    /** Trainers that are not in the trainee's list. */
+    /**
+     * Active trainers that are not in the trainee's trainers list.
+     * @throws com.epam.training.gym.service.exception.AuthenticationException if the credentials are wrong
+     */
     List<Trainer> getUnassignedTrainers(Credentials credentials);
 
     /**
@@ -37,7 +42,8 @@ public interface TraineeService extends AccountService<Trainee> {
      * @return the trainers now assigned to the trainee
      * @throws com.epam.training.gym.service.exception.EntityNotFoundException if any username is unknown;
      *         the list is not changed then
-     * @throws IllegalArgumentException if the list is null or empty, or has blank or repeated usernames
+     * @throws com.epam.training.gym.service.exception.InvalidInputException
+     *         if the list is null or empty, or has blank or repeated usernames
      */
     List<Trainer> updateTrainers(Credentials credentials, List<String> trainerUsernames);
 }

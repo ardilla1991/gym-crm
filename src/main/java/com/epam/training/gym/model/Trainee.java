@@ -1,8 +1,10 @@
 package com.epam.training.gym.model;
 
+import com.epam.training.gym.model.validation.FieldLimits;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -29,6 +31,7 @@ public class Trainee implements UserProfile {
 
     /** Personal data: excluded from toString() so it does not end up in logs. */
     @ToString.Exclude
+    @Size(max = FieldLimits.ADDRESS_MAX)
     private String address;
 
     @NotNull

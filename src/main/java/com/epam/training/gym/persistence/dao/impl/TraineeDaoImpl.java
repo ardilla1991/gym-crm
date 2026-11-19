@@ -40,7 +40,8 @@ public class TraineeDaoImpl implements TraineeDao {
     @Override
     public Optional<Trainee> findByUsername(String username) {
         return entityManager
-                .createQuery("SELECT t FROM Trainee t WHERE t.user.username = :username", TraineeEntity.class)
+                .createQuery("SELECT t FROM Trainee t JOIN FETCH t.user WHERE t.user.username = :username",
+                        TraineeEntity.class)
                 .setParameter("username", username)
                 .getResultStream()
                 .findFirst()
@@ -68,6 +69,7 @@ public class TraineeDaoImpl implements TraineeDao {
         TraineeEntity entity = entityManager.find(TraineeEntity.class, trainee.getId());
         entity.getUser().setFirstName(trainee.getUser().getFirstName());
         entity.getUser().setLastName(trainee.getUser().getLastName());
+        entity.getUser().setActive(trainee.getUser().isActive());
         entity.setDateOfBirth(trainee.getDateOfBirth());
         entity.setAddress(trainee.getAddress());
         log.debug("Trainee updated: id={}", entity.getId());

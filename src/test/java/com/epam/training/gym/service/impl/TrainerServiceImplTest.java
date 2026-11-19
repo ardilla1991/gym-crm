@@ -10,6 +10,8 @@ import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.service.auth.UserAuthenticator;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidInputException;
+import com.epam.training.gym.service.exception.InvalidStateException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
 import jakarta.validation.ConstraintViolationException;
@@ -32,7 +34,6 @@ public class TrainerServiceImplTest {
 
     private static final String USERNAME = "Anna.Lee";
     private static final String CURRENT_PASSWORD = "abcdef1234";
-    private static final String NEW_PASSWORD = "newPass123";
 
     private static final Credentials VALID_CREDENTIALS = new Credentials(USERNAME, CURRENT_PASSWORD);
     private static final Credentials WRONG_PASSWORD_CREDENTIALS = new Credentials(USERNAME, "wrong");
@@ -133,64 +134,47 @@ public class TrainerServiceImplTest {
         assertFalse(trainerService.matchCredentials(VALID_CREDENTIALS));
     }
 
-    // ---------- changePassword ----------
+    // ---------- authenticate ----------
 
     @Test
-    void changePassword_rightCredentials_savesNewPassword() {
+    void authenticate_rightPassword_returnsOwnProfile() {
         Trainer trainer = signIn(true);
 
-        trainerService.changePassword(VALID_CREDENTIALS, NEW_PASSWORD);
-
-        verify(userDao).updatePassword(trainer.getUser(), NEW_PASSWORD);
+        assertSame(trainer, trainerService.authenticate(VALID_CREDENTIALS));
     }
 
     @Test
-    void changePassword_wrongPassword_throwsAndKeepsOldPassword() {
-        assertThrows(AuthenticationException.class,
-                () -> trainerService.changePassword(WRONG_PASSWORD_CREDENTIALS, NEW_PASSWORD));
+    void authenticate_wrongPassword_throws() {
+        assertThrows(AuthenticationException.class, () -> trainerService.authenticate(WRONG_PASSWORD_CREDENTIALS));
 
-        verify(userDao, never()).updatePassword(any(), any());
+        verify(trainerDao, never()).findByUsername(any());
     }
 
-    @Test
-    void changePassword_blankNewPassword_throwsAndKeepsOldPassword() {
-        signIn(true);
-
-        assertThrows(IllegalArgumentException.class,
-                () -> trainerService.changePassword(VALID_CREDENTIALS, " "));
-
-        verify(userDao, never()).updatePassword(any(), any());
-    }
+    // ---------- changeActiveStatus ----------
 
     @Test
-    void changePassword_wrongPassword_isRejectedBeforeCheckingNewPassword() {
-        assertThrows(AuthenticationException.class,
-                () -> trainerService.changePassword(WRONG_PASSWORD_CREDENTIALS, " "));
-    }
+    void changeActiveStatus_inactiveTrainer_activates() {
+        Trainer trainer = signIn(false);
 
-    // ---------- toggleActive ----------
+        trainerService.changeActiveStatus(VALID_CREDENTIALS, true);
 
-    @Test
-    void toggleActive_activeTrainer_becomesInactive() {
-        Trainer trainer = signIn(true);
-
-        assertFalse(trainerService.toggleActive(VALID_CREDENTIALS));
-        assertFalse(trainer.getUser().isActive());
+        assertTrue(trainer.getUser().isActive());
         verify(userDao).updateActive(trainer.getUser());
     }
 
     @Test
-    void toggleActive_calledTwice_returnsToOriginalStatus() {
-        signIn(false);
+    void changeActiveStatus_sameStatus_throwsAndKeepsStatus() {
+        signIn(true);
 
-        assertTrue(trainerService.toggleActive(VALID_CREDENTIALS));     // inactive -> active
-        assertFalse(trainerService.toggleActive(VALID_CREDENTIALS));    // active -> inactive: not idempotent
+        assertThrows(InvalidStateException.class, () -> trainerService.changeActiveStatus(VALID_CREDENTIALS, true));
+
+        verify(userDao, never()).updateActive(any());
     }
 
     @Test
-    void toggleActive_wrongPassword_throwsAndKeepsStatus() {
+    void changeActiveStatus_wrongPassword_throwsAndKeepsStatus() {
         assertThrows(AuthenticationException.class,
-                () -> trainerService.toggleActive(WRONG_PASSWORD_CREDENTIALS));
+                () -> trainerService.changeActiveStatus(WRONG_PASSWORD_CREDENTIALS, false));
 
         verify(userDao, never()).updateActive(any());
     }
@@ -248,10 +232,10 @@ public class TrainerServiceImplTest {
     void update_changesNamesAndKeepsSpecialization() {
         Trainer trainer = signIn(true);
         TrainingType specialization = trainer.getSpecialization();
-        when(trainerDao.update(trainer)).thenReturn(trainer);
+        when(trainerDao.findByUsernameWithTrainees(USERNAME)).thenReturn(Optional.of(trainer));
         Trainer newData = Trainer.builder()
                 .specialization(new TrainingType(1L, TrainingTypeName.FITNESS))   // must be ignored
-                .user(User.builder().firstName("Annie").lastName("Leigh").build())
+                .user(User.builder().firstName("Annie").lastName("Leigh").isActive(false).build())
                 .build();
 
         Trainer result = trainerService.update(VALID_CREDENTIALS, newData);
@@ -259,6 +243,7 @@ public class TrainerServiceImplTest {
         verify(trainerDao).update(trainer);
         assertEquals("Annie", trainer.getUser().getFirstName());
         assertEquals("Leigh", trainer.getUser().getLastName());
+        assertFalse(trainer.getUser().isActive());
         assertSame(specialization, trainer.getSpecialization());
         assertEquals(USERNAME, trainer.getUser().getUsername());
         assertSame(trainer, result);
@@ -275,7 +260,8 @@ public class TrainerServiceImplTest {
 
     @Test
     void update_invalidNames_isRejectedAndChangesNothing() {
-        signIn(true);
+        Trainer trainer = signIn(true);
+        when(trainerDao.findByUsernameWithTrainees(USERNAME)).thenReturn(Optional.of(trainer));
         Trainer newData = Trainer.builder().user(User.builder().build()).build();
         doThrow(new ConstraintViolationException(Set.of())).when(entityValidator).validate(newData.getUser());
 
@@ -304,6 +290,18 @@ public class TrainerServiceImplTest {
                 .thenReturn(List.of());
 
         assertTrue(trainerService.getTrainings(VALID_CREDENTIALS, null).isEmpty());
+    }
+
+    @Test
+    void getTrainings_fromDateAfterToDate_throwsAndDoesNotSearch() {
+        signIn(true);
+        TrainerTrainingCriteria criteria = TrainerTrainingCriteria.builder()
+                .fromDate(LocalDate.of(2026, 5, 2))
+                .toDate(LocalDate.of(2026, 5, 1))
+                .build();
+
+        assertThrows(InvalidInputException.class, () -> trainerService.getTrainings(VALID_CREDENTIALS, criteria));
+        verify(trainingDao, never()).findTrainerTrainings(any(), any());
     }
 
     private static Training training(Trainer trainer) {

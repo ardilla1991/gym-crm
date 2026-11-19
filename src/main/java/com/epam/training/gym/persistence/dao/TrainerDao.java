@@ -16,12 +16,12 @@ public interface TrainerDao {
     /** For updating a trainee's trainers list by trainer usernames. */
     List<Trainer> findByUsernames(Collection<String> usernames);
 
-    /** Trainers that are not in the trainee's trainers list. */
-    List<Trainer> findNotAssignedToTrainee(String traineeUsername);
+    /** Active trainers that are not in the trainee's trainers list. */
+    List<Trainer> findActiveNotAssignedToTrainee(String traineeUsername);
 
     /** Like findByUsername, but also loads the trainer's trainees: for returning the profile. */
     Optional<Trainer> findByUsernameWithTrainees(String username);
 
-    /** Saves the first and last name; other fields are not changed. */
+    /** Saves the first and last name and status; other fields are not changed. */
     Trainer update(Trainer trainer);
 }

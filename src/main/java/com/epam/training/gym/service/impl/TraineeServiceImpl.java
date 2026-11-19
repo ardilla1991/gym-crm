@@ -10,8 +10,10 @@ import com.epam.training.gym.persistence.dao.TrainerDao;
 import com.epam.training.gym.persistence.dao.TrainingDao;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.exception.EntityNotFoundException;
+import com.epam.training.gym.service.exception.InvalidInputException;
 import com.epam.training.gym.service.generator.NewUserDataGenerator;
 import com.epam.training.gym.service.validation.EntityValidator;
+import com.epam.training.gym.service.validation.TrainingPeriodValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,19 +88,21 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     @Override
     @Transactional
     public Trainee update(Credentials credentials, Trainee newData) {
-        Trainee trainee = authenticate(credentials);
+        // Loads the trainee with the trainers list: the response returns the whole profile
+        Trainee trainee = authenticateWithDetails(credentials);
         entityValidator.validate(newData);
 
-        // Only these fields come from the caller; id, username, password and status stay as they are
+        // Only these fields come from the caller; id, username and password stay as they are
         trainee.getUser().setFirstName(newData.getUser().getFirstName());
         trainee.getUser().setLastName(newData.getUser().getLastName());
+        trainee.getUser().setActive(newData.getUser().isActive());
         trainee.setDateOfBirth(newData.getDateOfBirth());
         trainee.setAddress(newData.getAddress());
 
-        Trainee updated = traineeDao.update(trainee);
+        traineeDao.update(trainee);
         log.info("Trainee profile updated: username={}", credentials.username());
 
-        return updated;
+        return trainee;
     }
 
     @Override
@@ -113,6 +117,7 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     public List<Training> getTrainings(Credentials credentials, TraineeTrainingCriteria criteria) {
         authenticate(credentials);
         TraineeTrainingCriteria filters = criteria != null ? criteria : TraineeTrainingCriteria.builder().build();
+        TrainingPeriodValidator.validate(filters.fromDate(), filters.toDate());
         List<Training> trainings = trainingDao.findTraineeTrainings(credentials.username(), filters);
         log.info("Trainee trainings found: username={}, count={}", credentials.username(), trainings.size());
 
@@ -123,7 +128,7 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     @Transactional(readOnly = true)
     public List<Trainer> getUnassignedTrainers(Credentials credentials) {
         authenticate(credentials);
-        List<Trainer> trainers = trainerDao.findNotAssignedToTrainee(credentials.username());
+        List<Trainer> trainers = trainerDao.findActiveNotAssignedToTrainee(credentials.username());
         log.info("Unassigned trainers found: username={}, count={}", credentials.username(), trainers.size());
 
         return trainers;
@@ -150,14 +155,14 @@ public class TraineeServiceImpl extends AbstractProfileService<Trainee>
     /** The list must not be null or empty and must have no blank or repeated usernames. */
     private static Set<String> validTrainerUsernames(List<String> trainerUsernames) {
         if (trainerUsernames == null || trainerUsernames.isEmpty()) {
-            throw new IllegalArgumentException("Trainers list must not be empty");
+            throw new InvalidInputException("Trainers list must not be empty");
         }
         if (trainerUsernames.stream().anyMatch(username -> username == null || username.isBlank())) {
-            throw new IllegalArgumentException("Trainer username must not be blank");
+            throw new InvalidInputException("Trainer username must not be blank");
         }
         Set<String> unique = new HashSet<>(trainerUsernames);
         if (unique.size() != trainerUsernames.size()) {
-            throw new IllegalArgumentException("Trainer usernames must not repeat: " + trainerUsernames);
+            throw new InvalidInputException("Trainer usernames must not repeat: " + trainerUsernames);
         }
         return unique;
     }

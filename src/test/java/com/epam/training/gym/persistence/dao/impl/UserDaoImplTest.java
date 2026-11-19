@@ -17,6 +17,7 @@ import java.util.Set;
 import static com.epam.training.gym.persistence.dao.TestEntities.newUser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringJUnitConfig(TestJpaConfig.class)
@@ -65,6 +66,22 @@ public class UserDaoImplTest {
     @Test
     void matchesPassword_unknownUser_false() {
         assertFalse(userDao.matchesPassword("No.Body", "abcde12345"));
+    }
+
+    @Test
+    void findByUsername_existing_returnsUserWithoutPassword() {
+        entityManager.persist(newUser("John", "Smith", "John.Smith"));
+        flushAndClear();
+
+        User found = userDao.findByUsername("John.Smith").orElseThrow();
+
+        assertEquals("John", found.getFirstName());
+        assertNull(found.getPassword());
+    }
+
+    @Test
+    void findByUsername_unknown_returnsEmpty() {
+        assertTrue(userDao.findByUsername("No.Body").isEmpty());
     }
 
     @Test

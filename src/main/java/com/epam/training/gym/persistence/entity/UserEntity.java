@@ -1,5 +1,6 @@
 package com.epam.training.gym.persistence.entity;
 
+import com.epam.training.gym.model.validation.FieldLimits;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,10 +23,10 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "first_name", nullable = false)
+    @Column(name = "first_name", nullable = false, length = FieldLimits.NAME_MAX)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "last_name", nullable = false, length = FieldLimits.NAME_MAX)
     private String lastName;
 
     /** Unique among all users, so a trainee and a trainer can never share a username. */

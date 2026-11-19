@@ -1,14 +1,13 @@
 package com.epam.training.gym.api.facade;
 
-import com.epam.training.gym.model.Trainee;
-import com.epam.training.gym.model.Trainer;
-import com.epam.training.gym.model.Training;
+import com.epam.training.gym.model.*;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
 import com.epam.training.gym.model.criteria.TrainerTrainingCriteria;
 import com.epam.training.gym.service.TraineeService;
 import com.epam.training.gym.service.TrainerService;
 import com.epam.training.gym.service.TrainingService;
+import com.epam.training.gym.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,11 +39,14 @@ public class GymFacadeTest {
     @Mock
     private TrainingService trainingService;
 
+    @Mock
+    private UserService userService;
+
     private GymFacade facade;
 
     @BeforeEach
     void setUp() {
-        facade = new GymFacade(traineeService, trainerService, trainingService);
+        facade = new GymFacade(traineeService, trainerService, trainingService, userService);
     }
 
     // ---------- Trainee ----------
@@ -65,17 +67,10 @@ public class GymFacadeTest {
     }
 
     @Test
-    void changeTraineePassword_delegatesToService() {
-        facade.changeTraineePassword(CREDENTIALS, NEW_PASSWORD);
+    void changeTraineeActiveStatus_delegatesToService() {
+        facade.changeTraineeActiveStatus(CREDENTIALS, false);
 
-        verify(traineeService).changePassword(CREDENTIALS, NEW_PASSWORD);
-    }
-
-    @Test
-    void toggleTraineeActive_returnsServiceResult() {
-        when(traineeService.toggleActive(CREDENTIALS)).thenReturn(false);
-
-        assertFalse(facade.toggleTraineeActive(CREDENTIALS));
+        verify(traineeService).changeActiveStatus(CREDENTIALS, false);
     }
 
     // ---------- Trainer ----------
@@ -96,17 +91,10 @@ public class GymFacadeTest {
     }
 
     @Test
-    void changeTrainerPassword_delegatesToService() {
-        facade.changeTrainerPassword(CREDENTIALS, NEW_PASSWORD);
+    void changeTrainerActiveStatus_delegatesToService() {
+        facade.changeTrainerActiveStatus(CREDENTIALS, true);
 
-        verify(trainerService).changePassword(CREDENTIALS, NEW_PASSWORD);
-    }
-
-    @Test
-    void toggleTrainerActive_returnsServiceResult() {
-        when(trainerService.toggleActive(CREDENTIALS)).thenReturn(true);
-
-        assertTrue(facade.toggleTrainerActive(CREDENTIALS));
+        verify(trainerService).changeActiveStatus(CREDENTIALS, true);
     }
 
     // ---------- profiles ----------
@@ -199,5 +187,20 @@ public class GymFacadeTest {
         when(traineeService.updateTrainers(CREDENTIALS, usernames)).thenReturn(trainers);
 
         assertSame(trainers, facade.updateTraineeTrainers(CREDENTIALS, usernames));
+    }
+
+    @Test
+    void changePassword_delegatesToUserService() {
+        facade.changePassword(CREDENTIALS, NEW_PASSWORD);
+
+        verify(userService).changePassword(CREDENTIALS, NEW_PASSWORD);
+    }
+
+    @Test
+    void getTrainingTypes_returnsServiceResult() {
+        List<TrainingType> types = List.of(new TrainingType(2L, TrainingTypeName.YOGA));
+        when(trainingService.getTrainingTypes(CREDENTIALS)).thenReturn(types);
+
+        assertSame(types, facade.getTrainingTypes(CREDENTIALS));
     }
 }

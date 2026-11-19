@@ -70,13 +70,26 @@ public class TraineeDaoImplTest {
     }
 
     @Test
-    void update_savesNamesDateOfBirthAndAddress() {
+    void findByUsername_loadsUserInSameQuery() {
+        entityManager.persist(newTrainee("John.Smith"));
+        flushAndClear();
+        QueryCounter queries = new QueryCounter(entityManager);
+
+        Trainee found = traineeDao.findByUsername("John.Smith").orElseThrow();
+
+        assertEquals("John.Smith", found.getUser().getUsername());
+        assertEquals(1, queries.count());
+    }
+
+    @Test
+    void update_savesNamesStatusDateOfBirthAndAddress() {
         TraineeEntity entity = newTrainee("John.Smith");
         entityManager.persist(entity);
         flushAndClear();
         Trainee trainee = traineeDao.findByUsername("John.Smith").orElseThrow();
         trainee.getUser().setFirstName("Johnny");
         trainee.getUser().setLastName("Smithson");
+        trainee.getUser().setActive(false);
         trainee.setDateOfBirth(LocalDate.of(1991, 2, 20));
         trainee.setAddress("2 High Street");
 
@@ -87,6 +100,7 @@ public class TraineeDaoImplTest {
         TraineeEntity saved = entityManager.find(TraineeEntity.class, entity.getId());
         assertEquals("Johnny", saved.getUser().getFirstName());
         assertEquals("Smithson", saved.getUser().getLastName());
+        assertFalse(saved.getUser().isActive());
         assertEquals(LocalDate.of(1991, 2, 20), saved.getDateOfBirth());
         assertEquals("2 High Street", saved.getAddress());
         assertEquals("John.Smith", saved.getUser().getUsername());

@@ -3,6 +3,7 @@ package com.epam.training.gym.persistence.dao.impl;
 import com.epam.training.gym.model.User;
 import com.epam.training.gym.persistence.dao.UserDao;
 import com.epam.training.gym.persistence.entity.UserEntity;
+import com.epam.training.gym.persistence.mapper.UserEntityMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class UserDaoImpl implements UserDao {
@@ -40,6 +42,16 @@ public class UserDaoImpl implements UserDao {
                 .setParameter("password", password)
                 .getResultList()
                 .isEmpty();
+    }
+
+    @Override
+    public Optional<User> findByUsername(String username) {
+        return entityManager
+                .createQuery("SELECT u FROM User u WHERE u.username = :username", UserEntity.class)
+                .setParameter("username", username)
+                .getResultStream()
+                .findFirst()
+                .map(UserEntityMapper::toModel);
     }
 
     @Override
