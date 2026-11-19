@@ -4,6 +4,7 @@ import com.epam.training.gym.api.facade.GymFacade;
 import com.epam.training.gym.api.rest.ApiPaths;
 import com.epam.training.gym.api.rest.controller.api.AuthApiDocs;
 import com.epam.training.gym.api.rest.dto.ChangePasswordRequest;
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import jakarta.validation.Valid;
@@ -15,9 +16,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController implements AuthApiDocs {
 
     private final GymFacade facade;
+    private final GymMetrics gymMetrics;
 
-    public AuthController(GymFacade facade) {
+    public AuthController(GymFacade facade, GymMetrics gymMetrics) {
         this.facade = facade;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
@@ -25,6 +28,7 @@ public class AuthController implements AuthApiDocs {
     public void login(Credentials credentials) {
         // A user is either a trainee or a trainer, so one successful check is enough
         if (!facade.matchTraineeCredentials(credentials) && !facade.matchTrainerCredentials(credentials)) {
+            gymMetrics.authenticationFailed();
             throw new AuthenticationException();
         }
     }

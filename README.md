@@ -1,6 +1,6 @@
 # Gym CRM
 
-REST API for a gym CRM on plain Spring Framework 7 (no Spring Boot): Spring MVC on embedded Tomcat,
+REST API for a gym CRM on Spring Boot 4: Spring MVC on embedded Tomcat,
 JPA with Hibernate, H2 or PostgreSQL. Requirements: JDK 21, Maven 3.9+; optional Docker or a local PostgreSQL.
 
 ## Layers
@@ -10,29 +10,52 @@ One Maven module; the layers are packages.
 | Package       | What is there                                                             | Works with                      |
 |---------------|---------------------------------------------------------------------------|---------------------------------|
 | `api.rest`    | REST controllers, DTOs and their mappers, error handling, logging filters | DTOs outside, models inside     |
-| `api`         | `Main`, `GymApplication` (embedded Tomcat), `GymFacade`                   | models                          |
+| `api`         | `GymFacade`                                                               | models                          |
 | `service`     | business logic, model validation                                          | models                          |
 | `persistence` | DAOs; JPA entities and mappers                                            | models outside, entities inside |
 | `model`       | models: Lombok and validation, no JPA                                     | —                               |
-| `config`      | Spring and database configuration                                         | —                               |
+
+`GymApplication` (the root package) starts Spring Boot. Settings: `src/main/resources/application.yml`.
 
 ## Run
 
-```bash
-# H2: recreated on every start from src/main/resources/db/data.sql
-mvn compile exec:java
+Each environment is a Spring profile with its own database (`src/main/resources/application-<profile>.yml`).
 
-# PostgreSQL in Docker (a local one: add -Ddb.username=... -Ddb.password=...)
-docker compose up -d
-mvn compile exec:java -Ddb=postgres -Ddb.schema=create   # first start: creates the tables, loads data.sql
-mvn compile exec:java -Ddb=postgres                      # later starts: keeps the data
+**local** (default): H2 in memory, data from `db/data.sql` on every start.
+```powershell
+mvn spring-boot:run
 ```
 
-In PowerShell quote each option: `"-Ddb=postgres"`. Another port: `-Dserver.port=9090`.
+**dev**: PostgreSQL in Docker.
+```powershell
+docker compose up -d
+mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+First start on an empty database: add `"-Dspring-boot.run.arguments=--spring.jpa.hibernate.ddl-auto=create"`.
+
+**stg**: the database comes only from environment variables.
+```powershell
+$env:DB_URL="jdbc:postgresql://localhost:5432/gym_crm"
+$env:DB_USERNAME="gym"
+$env:DB_PASSWORD="gym"
+mvn spring-boot:run "-Dspring-boot.run.profiles=stg"
+```
+
+**prod**: the database comes only from environment variables.
+```powershell
+$env:DB_URL="jdbc:postgresql://localhost:5432/gym_crm"
+$env:DB_USERNAME="gym"
+$env:DB_PASSWORD="gym"
+mvn spring-boot:run "-Dspring-boot.run.profiles=prod"
+```
+
+The start log shows the profile: `The following 1 profile is active: "stg"`.
 
 - Swagger UI: http://localhost:8080/swagger-ui/index.html (**Authorize** with a user below)
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
 - Health check: http://localhost:8080/api/v1/health
+- Actuator health: http://localhost:8080/actuator/health; own checks: `trainingTypes` (all training types are in the database), `memory` (heap used below 90%)
+- Prometheus metrics: http://localhost:8080/actuator/prometheus; own metrics: `gym_registrations_total` (by role), `gym_trainings_added_total`, `gym_authentication_failures_total`
 
 Users from `data.sql`:
 
@@ -96,7 +119,8 @@ Every error has the body `{"status": 404, "error": "Not Found", "message": "..."
 
 ## Logging
 
-Logback, `src/main/resources/logback.xml`.
+Logback, `src/main/resources/logback.xml`: the format and the default log levels.
+A profile overrides them in `application-<profile>.yml`.
 
 - Every call gets a transactionId (from the `X-Transaction-Id` header or a new UUID); it is in every log line of the call
   and in the response header.

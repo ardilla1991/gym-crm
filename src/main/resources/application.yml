@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: gym-crm
+  profiles:
+    default: local
+  jpa:
+    # Entities are loaded only inside the service transactions, not while the response is written
+    open-in-view: false
+    properties:
+      # Runs only when Hibernate creates the schema
+      jakarta.persistence.sql-load-script-source: db/data.sql
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+  endpoint:
+    health:
+      show-details: always

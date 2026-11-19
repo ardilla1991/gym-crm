@@ -1,5 +1,6 @@
 package com.epam.training.gym.service.impl;
 
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.*;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.model.criteria.TraineeTrainingCriteria;
@@ -67,6 +68,9 @@ public class TraineeServiceImplTest {
     @Mock
     private EntityValidator entityValidator;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     @InjectMocks
     private TraineeServiceImpl traineeService;
 
@@ -83,6 +87,7 @@ public class TraineeServiceImplTest {
         order.verify(entityValidator).validate(trainee);
         order.verify(newUserDataGenerator).fillNewUserData(trainee.getUser());
         order.verify(traineeDao).save(trainee);
+        verify(gymMetrics).traineeRegistered();
     }
 
     @Test
@@ -111,6 +116,7 @@ public class TraineeServiceImplTest {
 
         verify(newUserDataGenerator, never()).fillNewUserData(any());
         verify(traineeDao, never()).save(any());
+        verify(gymMetrics, never()).traineeRegistered();
     }
 
     /** A trainee as a caller passes it: a model without id, username and password. */

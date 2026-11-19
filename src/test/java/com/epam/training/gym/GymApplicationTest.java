@@ -1,11 +1,12 @@
-package com.epam.training.gym.api;
+package com.epam.training.gym;
 
 import com.epam.training.gym.api.rest.TestPaths;
 import com.epam.training.gym.api.rest.auth.TestAuth;
 import com.epam.training.gym.model.validation.FieldLimits;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.test.context.ActiveProfiles;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -23,23 +24,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Starts the whole application once on a free port and calls it over HTTP: no mocks, H2 with data.sql.
  * The tests only add new users and never change the existing ones, so their order does not matter.
  */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
 public class GymApplicationTest {
 
     /** A trainee from data.sql. */
     private static final String EMILY = TestAuth.basic("Emily.Johnson", "Hq5sW1dF6y");
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    private static GymApplication application;
-
-    @BeforeAll
-    static void start() throws Exception {
-        application = GymApplication.start(0);
-    }
-
-    @AfterAll
-    static void stop() throws Exception {
-        application.stop();
-    }
+    @LocalServerPort
+    private int port;
 
     @Test
     void start_serverAnswersHealthCheck() throws Exception {
@@ -49,6 +43,28 @@ public class GymApplicationTest {
         assertTrue(response.body().contains("UP"));
         // TransactionIdFilter is registered: every response carries the id
         assertTrue(response.headers().firstValue("X-Transaction-Id").isPresent());
+    }
+
+    @Test
+    void actuatorHealth_isUpWithDetailsAndNoSignIn() throws Exception {
+        HttpResponse<String> response = send("GET", TestPaths.ACTUATOR_HEALTH, null, null);
+
+        assertEquals(200, response.statusCode());
+        JsonNode health = JSON.readTree(response.body());
+        assertEquals("UP", health.get("status").asString());
+        assertEquals("UP", health.at("/components/db/status").asString());
+        assertEquals("UP", health.at("/components/trainingTypes/status").asString());
+        assertEquals("UP", health.at("/components/memory/status").asString());
+    }
+
+    @Test
+    void actuatorPrometheus_showsCustomMetrics() throws Exception {
+        HttpResponse<String> response = send("GET", TestPaths.ACTUATOR_PROMETHEUS, null, null);
+
+        assertEquals(200, response.statusCode());
+        assertTrue(response.body().contains("gym_registrations_total{role=\"trainee\"}"), response.body());
+        assertTrue(response.body().contains("gym_trainings_added_total"));
+        assertTrue(response.body().contains("gym_authentication_failures_total"));
     }
 
     @Test
@@ -153,9 +169,9 @@ public class GymApplicationTest {
     }
 
     /** Sends a request to the running application; authorization and body may be null. */
-    private static HttpResponse<String> send(String method, String path, String authorization, String json)
+    private HttpResponse<String> send(String method, String path, String authorization, String json)
             throws Exception {
-        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://localhost:" + application.port() + path))
+        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
                 .method(method, json == null
                         ? HttpRequest.BodyPublishers.noBody()
                         : HttpRequest.BodyPublishers.ofString(json));

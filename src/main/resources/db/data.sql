@@ -1,4 +1,4 @@
--- Executed by Hibernate right after the tables are created (see jpa.properties).
+-- Executed by Hibernate right after the tables are created (see application.yml).
 -- One statement per line.
 
 -- Training types: a constant list, ids are fixed.

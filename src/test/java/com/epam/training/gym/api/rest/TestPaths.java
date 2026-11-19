@@ -16,6 +16,8 @@ public final class TestPaths {
     public static final String HEALTH = "/api/v1/health";
     /** OpenAPI JSON built by springdoc. */
     public static final String API_DOCS = "/v3/api-docs";
+    public static final String ACTUATOR_HEALTH = "/actuator/health";
+    public static final String ACTUATOR_PROMETHEUS = "/actuator/prometheus";
 
     private TestPaths() {
     }

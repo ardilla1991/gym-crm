@@ -1,5 +1,6 @@
 package com.epam.training.gym.service.impl;
 
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.*;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.persistence.dao.TraineeDao;
@@ -55,6 +56,9 @@ public class TrainingServiceImplTest {
     @Mock
     private UserAuthenticator userAuthenticator;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     @InjectMocks
     private TrainingServiceImpl trainingService;
 
@@ -90,6 +94,7 @@ public class TrainingServiceImplTest {
         assertSame(yogaFromDb, training.getTrainingType());
         assertSame(saved, result);
         verify(entityValidator).validate(training);
+        verify(gymMetrics).trainingAdded();
     }
 
     @Test
@@ -111,6 +116,7 @@ public class TrainingServiceImplTest {
 
         verify(trainerDao, never()).findByUsername(any());
         verify(trainingDao, never()).save(any());
+        verify(gymMetrics, never()).trainingAdded();
     }
 
     @Test
