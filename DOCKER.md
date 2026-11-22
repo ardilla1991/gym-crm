@@ -47,3 +47,23 @@ Stop:
 ```powershell
 docker compose down
 ```
+
+## SubTask 3. Shell and application logs
+
+Start the containers from SubTask 2 and make a REST call, for example http://localhost:8080/api/v1/health:
+```powershell
+docker compose up -d
+```
+
+**1. Start a shell in the container**
+```powershell
+docker compose exec app sh
+```
+
+**2. Check the application logs in the shell**
+```sh
+tail -n 30 logs/gym-crm.log
+exit
+```
+
+Result: the log shows the REST calls with their `txId`.

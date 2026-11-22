@@ -121,7 +121,7 @@ Every error has the body `{"status": 404, "error": "Not Found", "message": "..."
 
 ## Logging
 
-Logback, `src/main/resources/logback.xml`: the format and the default log levels.
+Logback, `src/main/resources/logback.xml`: the format, the default log levels, the output (console and `logs/gym-crm.log`).
 A profile overrides them in `application-<profile>.yml`.
 
 - Every call gets a transactionId (from the `X-Transaction-Id` header or a new UUID); it is in every log line of the call
