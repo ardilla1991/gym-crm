@@ -1,5 +1,6 @@
 package com.epam.training.gym.service.impl;
 
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.Trainee;
 import com.epam.training.gym.model.Trainer;
 import com.epam.training.gym.model.Training;
@@ -35,6 +36,7 @@ public class TrainingServiceImpl implements TrainingService {
     private TrainingTypeDao trainingTypeDao;
     private EntityValidator entityValidator;
     private UserAuthenticator userAuthenticator;
+    private GymMetrics gymMetrics;
 
     @Autowired
     public void setTraineeService(TraineeService traineeService) {
@@ -71,6 +73,11 @@ public class TrainingServiceImpl implements TrainingService {
         this.userAuthenticator = userAuthenticator;
     }
 
+    @Autowired
+    public void setGymMetrics(GymMetrics gymMetrics) {
+        this.gymMetrics = gymMetrics;
+    }
+
     @Override
     @Transactional
     public Training addTraining(Credentials traineeCredentials, String trainerUsername, Training training) {
@@ -93,6 +100,7 @@ public class TrainingServiceImpl implements TrainingService {
         Training saved = trainingDao.save(training);
         log.info("Training added: id={}, trainee={}, trainer={}",
                 saved.getId(), traineeCredentials.username(), trainerUsername);
+        gymMetrics.trainingAdded();
 
         return saved;
     }

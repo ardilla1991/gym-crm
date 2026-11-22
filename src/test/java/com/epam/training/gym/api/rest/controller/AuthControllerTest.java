@@ -6,6 +6,7 @@ import com.epam.training.gym.api.rest.auth.CredentialsArgumentResolver;
 import com.epam.training.gym.api.rest.auth.TestAuth;
 import com.epam.training.gym.api.rest.exception.ApiError;
 import com.epam.training.gym.api.rest.exception.GlobalExceptionHandler;
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.auth.Credentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,11 +38,14 @@ public class AuthControllerTest {
     @Mock
     private GymFacade facade;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(facade))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(facade, gymMetrics))
                 .setCustomArgumentResolvers(new CredentialsArgumentResolver())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -53,6 +57,8 @@ public class AuthControllerTest {
 
         mockMvc.perform(get(TestPaths.LOGIN).header(HttpHeaders.AUTHORIZATION, EMILY_HEADER))
                 .andExpect(status().isOk());
+
+        verify(gymMetrics, never()).authenticationFailed();
     }
 
     @Test
@@ -77,6 +83,7 @@ public class AuthControllerTest {
         assertEquals("Basic realm=\"Gym CRM\"", response.getHeader(HttpHeaders.WWW_AUTHENTICATE));
         assertEquals(new ApiError(401, "Unauthorized", "Invalid username or password"),
                 JSON.readValue(response.getContentAsString(), ApiError.class));
+        verify(gymMetrics).authenticationFailed();
     }
 
     @Test

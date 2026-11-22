@@ -1,6 +1,7 @@
 package com.epam.training.gym.api.rest.auth;
 
 import com.epam.training.gym.api.facade.GymFacade;
+import com.epam.training.gym.metrics.GymMetrics;
 import com.epam.training.gym.model.auth.Credentials;
 import com.epam.training.gym.service.exception.AuthenticationException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,9 +17,11 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private final GymFacade facade;
+    private final GymMetrics gymMetrics;
 
-    public AuthenticationInterceptor(GymFacade facade) {
+    public AuthenticationInterceptor(GymFacade facade, GymMetrics gymMetrics) {
         this.facade = facade;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
@@ -26,6 +29,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         Credentials credentials = CredentialsArgumentResolver.parse(request.getHeader(HttpHeaders.AUTHORIZATION));
         // A user is either a trainee or a trainer, so one successful check is enough
         if (!facade.matchTraineeCredentials(credentials) && !facade.matchTrainerCredentials(credentials)) {
+            gymMetrics.authenticationFailed();
             throw new AuthenticationException();
         }
         return true;

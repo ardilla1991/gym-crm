@@ -36,7 +36,7 @@ public class TrainingTypeDaoImpl implements TrainingTypeDao {
     public List<TrainingType> findAll() {
         return entityManager
                 .createQuery("SELECT t FROM TrainingType t ORDER BY t.trainingTypeName", TrainingTypeEntity.class)
-                .getResultStream()
+                .getResultList().stream()
                 .map(TrainingTypeEntityMapper::toModel)
                 .toList();
     }

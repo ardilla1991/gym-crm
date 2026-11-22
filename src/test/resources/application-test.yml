@@ -1,0 +1,9 @@
+# Tests: their own in-memory H2, created with data.sql on every start
+spring:
+  datasource:
+    url: jdbc:h2:mem:gym_crm_test;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
