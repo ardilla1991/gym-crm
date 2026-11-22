@@ -1,5 +1,7 @@
 # Gym CRM
 
+**Docker task: see [DOCKER.md](DOCKER.md).**
+
 REST API for a gym CRM on Spring Boot 4: Spring MVC on embedded Tomcat,
 JPA with Hibernate, H2 or PostgreSQL. Requirements: JDK 21, Maven 3.9+; optional Docker or a local PostgreSQL.
 
@@ -28,7 +30,7 @@ mvn spring-boot:run
 
 **dev**: PostgreSQL in Docker.
 ```powershell
-docker compose up -d
+docker compose up -d postgres
 mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 First start on an empty database: add `"-Dspring-boot.run.arguments=--spring.jpa.hibernate.ddl-auto=create"`.

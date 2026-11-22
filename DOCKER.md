@@ -24,3 +24,26 @@ Stop:
 ```powershell
 docker stop gym-crm
 ```
+
+## SubTask 2. Enabled integrations
+
+**1. Network configuration:** [docker-compose.yml](docker-compose.yml), network `gym-net`, database host `postgres`
+
+**2. Run the application with the database** (profile `dev`, PostgreSQL)
+
+First start (empty database), creates the tables and loads `data.sql`:
+```powershell
+docker compose run --build --rm app --spring.jpa.hibernate.ddl-auto=create-only --spring.main.web-application-type=none
+```
+
+Start:
+```powershell
+docker compose up -d --build
+```
+
+Result: http://localhost:8080/actuator/health shows `UP`, database `PostgreSQL`.
+
+Stop:
+```powershell
+docker compose down
+```

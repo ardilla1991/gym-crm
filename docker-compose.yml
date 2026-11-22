@@ -1,8 +1,4 @@
-# Optional: run PostgreSQL for the application (by default the app uses H2).
-# Start: docker compose up -d     
-# Stop: docker compose down
-
-# DB http://localhost:5432
+# Gym CRM with PostgreSQL
 services:
   postgres:
     image: postgres:17
@@ -15,6 +11,32 @@ services:
       - "5432:5432"
     volumes:
       - gym-crm-data:/var/lib/postgresql/data
+    networks:
+      - gym-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U gym -d gym_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: gym-crm-app
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/gym_crm
+      DB_USERNAME: gym
+      DB_PASSWORD: gym
+    ports:
+      - "8080:8080"
+    networks:
+      - gym-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  gym-net:
 
 volumes:
   gym-crm-data:
