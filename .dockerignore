@@ -1,0 +1,5 @@
+target/
+.idea/
+.git/
+rest-check*
+test-output.txt

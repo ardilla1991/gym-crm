@@ -1,12 +1,23 @@
 <configuration>
 
+    <!-- %X{transactionId}: the id that TransactionIdFilter put into the MDC; empty outside a REST call.
+         %replace: line breaks in a message become spaces. A message may contain values from the client
+         (query parameters, usernames), and a line break there would start a fake log line without the txId.
+         Stack traces are written by %ex after the message and keep their lines -->
+    <property name="LOG_PATTERN"
+              value="%d{HH:mm:ss.SSS} %-5level [txId=%X{transactionId}] %logger{20} - %replace(%msg){'[\r\n]+', ' '}%n"/>
+
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <!-- %X{transactionId}: the id that TransactionIdFilter put into the MDC; empty outside a REST call.
-                 %replace: line breaks in a message become spaces. A message may contain values from the client
-                 (query parameters, usernames), and a line break there would start a fake log line without the txId.
-                 Stack traces are written by %ex after the message and keep their lines -->
-            <pattern>%d{HH:mm:ss.SSS} %-5level [txId=%X{transactionId}] %logger{20} - %replace(%msg){'[\r\n]+', ' '}%n</pattern>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/gym-crm.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
         </encoder>
     </appender>
 
@@ -15,6 +26,7 @@
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
     </root>
 
 </configuration>

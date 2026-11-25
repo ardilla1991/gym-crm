@@ -1,5 +1,7 @@
 # Gym CRM
 
+**Docker task: see [DOCKER.md](DOCKER.md).**
+
 REST API for a gym CRM on Spring Boot 4: Spring MVC on embedded Tomcat,
 JPA with Hibernate, H2 or PostgreSQL. Requirements: JDK 21, Maven 3.9+; optional Docker or a local PostgreSQL.
 
@@ -28,7 +30,7 @@ mvn spring-boot:run
 
 **dev**: PostgreSQL in Docker.
 ```powershell
-docker compose up -d
+docker compose up -d postgres
 mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 First start on an empty database: add `"-Dspring-boot.run.arguments=--spring.jpa.hibernate.ddl-auto=create"`.
@@ -119,7 +121,7 @@ Every error has the body `{"status": 404, "error": "Not Found", "message": "..."
 
 ## Logging
 
-Logback, `src/main/resources/logback.xml`: the format and the default log levels.
+Logback, `src/main/resources/logback.xml`: the format, the default log levels, the output (console and `logs/gym-crm.log`).
 A profile overrides them in `application-<profile>.yml`.
 
 - Every call gets a transactionId (from the `X-Transaction-Id` header or a new UUID); it is in every log line of the call
